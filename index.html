@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Obrona Miasta - v1.3</title>
+    <title>Obrona Miasta - v1.4</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Obrona Miasta - v1.3</h1>
+    <h1>Obrona Miasta - v1.4</h1>
 
     <div class="stats">
         <p id="points">Punkty: 100</p>
@@ -24,30 +24,29 @@
     <h2>Jednostki</h2>
     <div class="units">
         <div>
-            <p>Wojownik (koszt: 15 pkt)</p>
-            <button id="buy-warrior">Kup Wojownika</button>
-            <button id="send-warrior">Wyślij Wojownika</button>
-            <button id="upgrade-warrior">Ulepsz Wojownika (koszt: <span id="upgrade-warrior-cost">20</span> pkt)</button>
-            <p id="warrior-stats">Wojownik: Poziom 1, Atak 5, Ilość: 0</p>
+            <button id="send-warrior">Wojownik - Poziom 1 (Koszt: 15 pkt)</button>
+            <button id="upgrade-warrior">Ulepsz Wojownika (Koszt: <span id="upgrade-warrior-cost">20</span> pkt)</button>
+            <p id="warrior-stats">Atak: 5, Ilość: 0</p>
         </div>
         <div>
-            <p>Łucznik (koszt: 20 pkt)</p>
-            <button id="buy-archer">Kup Łucznika</button>
-            <button id="send-archer">Wyślij Łucznika</button>
-            <button id="upgrade-archer">Ulepsz Łucznika (koszt: <span id="upgrade-archer-cost">30</span> pkt)</button>
-            <p id="archer-stats">Łucznik: Poziom 1, Atak 8, Ilość: 0</p>
+            <button id="send-archer">Łucznik - Poziom 1 (Koszt: 20 pkt)</button>
+            <button id="upgrade-archer">Ulepsz Łucznika (Koszt: <span id="upgrade-archer-cost">30</span> pkt)</button>
+            <p id="archer-stats">Atak: 8, Ilość: 0</p>
         </div>
         <div>
-            <p>Pikinier (koszt: 25 pkt)</p>
-            <button id="buy-pikeman">Kup Pikiniera</button>
-            <button id="send-pikeman">Wyślij Pikiniera</button>
-            <button id="upgrade-pikeman">Ulepsz Pikiniera (koszt: <span id="upgrade-pikeman-cost">40</span> pkt)</button>
-            <p id="pikeman-stats">Pikinier: Poziom 1, Atak 10, Ilość: 0</p>
+            <button id="send-pikeman">Pikinier - Poziom 1 (Koszt: 25 pkt)</button>
+            <button id="upgrade-pikeman">Ulepsz Pikiniera (Koszt: <span id="upgrade-pikeman-cost">40</span> pkt)</button>
+            <p id="pikeman-stats">Atak: 10, Ilość: 0</p>
         </div>
     </div>
 
+    <button id="repair-wall">Napraw Mury (Koszt: 30 pkt)</button>
+
     <h2>Dziennik wydarzeń</h2>
     <div id="event-log"></div>
+
+    <audio id="correct-sound" src="correct.mp3"></audio>
+    <audio id="wrong-sound" src="wrong.mp3"></audio>
 
     <script src="game.js"></script>
 </body>
