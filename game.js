@@ -132,10 +132,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setInterval(enemyAttack, 10000); // Co 10 sekund atak wroga
     setInterval(spawnEnemy, 15000); // Co 15 sekund pojawiają się nowi wrogowie
-    setInterval(() => { 
-        points = Math.max(0, points - 0.1); 
-        updateDisplay(); 
-    }, 1000);
+
 
     updateDisplay();
 });
