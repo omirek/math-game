@@ -11,6 +11,7 @@ let units = {
 };
 
 let eventLog = []; // Dziennik zdarzeń
+let correctAnswer = 0; // Prawidłowa odpowiedź
 
 // Funkcja logowania wydarzeń
 function logEvent(message) {
@@ -29,16 +30,25 @@ function updateEventLog() {
     });
 }
 
+// Funkcja losowania nowego zadania matematycznego
+function generateMathProblem() {
+    const num1 = Math.floor(Math.random() * 10) + 1; // Losowa liczba od 1 do 10
+    const num2 = Math.floor(Math.random() * 10) + 1; // Losowa liczba od 1 do 10
+    correctAnswer = num1 + num2; // Prawidłowa odpowiedź
+    const problemText = `${num1} + ${num2} = ?`; // Tekst zadania
+    document.getElementById('problem').textContent = problemText; // Wyświetlenie zadania
+}
+
 // Funkcja rozwiązywania zadania matematycznego
 function solveMathProblem() {
     const answerInput = document.getElementById('answer');
     const answer = parseInt(answerInput.value);
-    const correctAnswer = 8 + 4; // Przykładowe zadanie: 5 + 3
 
     if (answer === correctAnswer) {
         points += 10;
-        logEvent(`Rozwiązano zadanie: 8 + 4 = 12`);
+        logEvent(`Rozwiązano zadanie: ${document.getElementById('problem').textContent}`);
         updateStatus();
+        generateMathProblem(); // Losowanie nowego zadania
     } else {
         logEvent(`Błędna odpowiedź! Spróbuj ponownie.`);
     }
@@ -87,6 +97,10 @@ function updateStatus() {
 
 // Nasłuchiwanie kliknięć na przyciski po załadowaniu strony
 document.addEventListener("DOMContentLoaded", function() {
+    // Generowanie pierwszego zadania matematycznego
+    generateMathProblem();
+
+    // Nasłuchiwać na przyciski jednostek i ulepszeń
     document.getElementById('warriorButton').addEventListener('click', function() { sendUnit('warrior'); });
     document.getElementById('archerButton').addEventListener('click', function() { sendUnit('archer'); });
     document.getElementById('pikemanButton').addEventListener('click', function() { sendUnit('pikeman'); });
