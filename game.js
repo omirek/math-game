@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
     let points = 100;
     let wallHealth = 100;
-    let enemies = [];
+    let enemies = [{ health: 50, attack: 2 }];
     let units = {
         warrior: { attack: 5, cost: 15, upgradeCost: 20, level: 1, count: 0 },
         archer: { attack: 8, cost: 20, upgradeCost: 30, level: 1, count: 0 },
@@ -97,13 +97,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function enemyAttack() {
         if (wallHealth > 0) {
-            wallHealth -= Math.max(1, enemies.length * 2);
-            logEvent("Wróg atakuje mury!");
+            let totalAttack = enemies.reduce((sum, enemy) => sum + enemy.attack, 0);
+            wallHealth -= totalAttack;
+            logEvent(`Wróg atakuje mury za ${totalAttack} obrażeń!`);
             updateDisplay();
         }
     }
 
+    function spawnEnemy() {
+        enemies.push({ health: 50, attack: Math.floor(Math.random() * 5) + 1 });
+        logEvent("Nowy wróg pojawił się na polu bitwy!");
+    }
+
     setInterval(enemyAttack, 5000);
+    setInterval(spawnEnemy, 10000);
     setInterval(() => { points = Math.max(0, points - 0.1); updateDisplay(); }, 1000);
 
     updateDisplay();
