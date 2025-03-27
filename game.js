@@ -84,3 +84,17 @@ function updateStatus() {
     document.getElementById('points').textContent = `Punkty: ${points}`;
     document.getElementById('wall-health').textContent = `Zdrowie murów: ${wallHealth}`;
 }
+
+// Nasłuchiwanie kliknięć na przyciski po załadowaniu strony
+document.addEventListener("DOMContentLoaded", function() {
+    document.getElementById('warriorButton').addEventListener('click', function() { sendUnit('warrior'); });
+    document.getElementById('archerButton').addEventListener('click', function() { sendUnit('archer'); });
+    document.getElementById('pikemanButton').addEventListener('click', function() { sendUnit('pikeman'); });
+    document.getElementById('knightButton').addEventListener('click', function() { sendUnit('knight'); });
+    document.getElementById('catapultButton').addEventListener('click', function() { sendUnit('catapult'); });
+    document.getElementById('mageButton').addEventListener('click', function() { sendUnit('mage'); });
+
+    document.getElementById('upgradeWarriorButton').addEventListener('click', function() { upgradeUnit('warrior'); });
+    document.getElementById('upgradeArcherButton').addEventListener('click', function() { upgradeUnit('archer'); });
+    document.getElementById('upgradeKnightButton').addEventListener('click', function() { upgradeUnit('knight'); });
+});
