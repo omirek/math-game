@@ -1,117 +1,110 @@
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
     let points = 100;
     let wallHealth = 100;
-
+    let enemies = [];
     let units = {
-        warrior: { count: 0, level: 1, attack: 5, health: 20, cost: 15, upgradeCost: 20 },
-        archer: { count: 0, level: 1, attack: 8, health: 15, cost: 20, upgradeCost: 30 },
-        pikeman: { count: 0, level: 1, attack: 10, health: 25, cost: 25, upgradeCost: 40 }
+        warrior: { attack: 5, cost: 15, upgradeCost: 20, level: 1, count: 0 },
+        archer: { attack: 8, cost: 20, upgradeCost: 30, level: 1, count: 0 },
+        pikeman: { attack: 10, cost: 25, upgradeCost: 40, level: 1, count: 0 }
     };
 
-    let currentProblem = {};
-
-    function generateMathProblem() {
-        let num1 = Math.floor(Math.random() * 10) + 1;
-        let num2 = Math.floor(Math.random() * 10) + 1;
-        let isMultiplication = Math.random() > 0.5;
-
-        currentProblem = {
-            question: isMultiplication ? `${num1} × ${num2}` : `${num1} + ${num2}`,
-            answer: isMultiplication ? num1 * num2 : num1 + num2
-        };
-
-        document.getElementById("problem").textContent = currentProblem.question + " = ?";
-    }
-
-    function solveMathProblem() {
-        let userAnswer = parseInt(document.getElementById("answer").value);
-        if (userAnswer === currentProblem.answer) {
-            points += 10;
-            logEvent("Poprawna odpowiedź! Otrzymujesz 10 punktów.");
-        } else {
-            logEvent("Błędna odpowiedź!");
-        }
-        updateDisplay();
-        generateMathProblem();
-    }
-
-    function buyUnit(type) {
-        if (points >= units[type].cost) {
-            points -= units[type].cost;
-            units[type].count++;
-            logEvent(`Kupiono ${type}. Teraz masz ${units[type].count}.`);
-        } else {
-            logEvent("Za mało punktów na zakup!");
-        }
-        updateDisplay();
-    }
-
-    function sendUnit(type) {
-        if (units[type].count > 0) {
-            logEvent(`Wysłałeś ${type} do obrony.`);
-            units[type].count--;
-            enemyAttack();
-        } else {
-            logEvent(`Nie masz dostępnych jednostek: ${type}`);
-        }
-        updateDisplay();
-    }
-
-    function upgradeUnit(type) {
-        if (points >= units[type].upgradeCost) {
-            points -= units[type].upgradeCost;
-            units[type].level++;
-            units[type].attack += 2;
-            units[type].health += 5;
-            units[type].upgradeCost += 10;
-            logEvent(`${type} ulepszony do poziomu ${units[type].level}`);
-        } else {
-            logEvent("Za mało punktów na ulepszenie!");
-        }
-        updateDisplay();
-    }
-
-    function enemyAttack() {
-        let damage = Math.floor(Math.random() * 10) + 5;
-        wallHealth -= damage;
-        logEvent(`Wróg zaatakował! Mury tracą ${damage} HP.`);
-        if (wallHealth <= 0) {
-            logEvent("Mury zostały zniszczone! Przegrałeś!");
-        }
-        updateDisplay();
-    }
+    const pointsDisplay = document.getElementById("points");
+    const wallDisplay = document.getElementById("wall-health");
+    const eventLog = document.getElementById("event-log");
+    const problemDisplay = document.getElementById("problem");
+    const answerInput = document.getElementById("answer");
+    const correctSound = document.getElementById("correct-sound");
+    const wrongSound = document.getElementById("wrong-sound");
 
     function logEvent(message) {
-        const eventLog = document.getElementById('event-log');
-        const newLogEntry = document.createElement('div');
-        newLogEntry.textContent = message;
-        eventLog.insertBefore(newLogEntry, eventLog.firstChild);
+        eventLog.innerHTML = `<p>${message}</p>` + eventLog.innerHTML;
     }
 
     function updateDisplay() {
-        document.getElementById('points').textContent = `Punkty: ${points.toFixed(1)}`;
-        document.getElementById('wall-health').textContent = `Zdrowie murów: ${wallHealth}`;
-        document.getElementById('warrior-stats').textContent = `Wojownik: Poziom ${units.warrior.level}, Atak ${units.warrior.attack}, Ilość: ${units.warrior.count}`;
-        document.getElementById('archer-stats').textContent = `Łucznik: Poziom ${units.archer.level}, Atak ${units.archer.attack}, Ilość: ${units.archer.count}`;
-        document.getElementById('pikeman-stats').textContent = `Pikinier: Poziom ${units.pikeman.level}, Atak ${units.pikeman.attack}, Ilość: ${units.pikeman.count}`;
+        pointsDisplay.textContent = `Punkty: ${points.toFixed(1)}`;
+        wallDisplay.textContent = `Zdrowie murów: ${wallHealth}`;
+        Object.keys(units).forEach(unit => {
+            document.getElementById(`${unit}-stats`).textContent = 
+                `Atak: ${units[unit].attack}, Ilość: ${units[unit].count}, Poziom: ${units[unit].level}`;
+        });
     }
 
-    document.getElementById("solve").addEventListener("click", solveMathProblem);
-    document.getElementById("buy-warrior").addEventListener("click", () => buyUnit('warrior'));
-    document.getElementById("buy-archer").addEventListener("click", () => buyUnit('archer'));
-    document.getElementById("buy-pikeman").addEventListener("click", () => buyUnit('pikeman'));
-    document.getElementById("send-warrior").addEventListener("click", () => sendUnit('warrior'));
-    document.getElementById("send-archer").addEventListener("click", () => sendUnit('archer'));
-    document.getElementById("send-pikeman").addEventListener("click", () => sendUnit('pikeman'));
-    document.getElementById("upgrade-warrior").addEventListener("click", () => upgradeUnit('warrior'));
-    document.getElementById("upgrade-archer").addEventListener("click", () => upgradeUnit('archer'));
-    document.getElementById("upgrade-pikeman").addEventListener("click", () => upgradeUnit('pikeman'));
+    function generateProblem() {
+        let a = Math.floor(Math.random() * 10) + 1;
+        let b = Math.floor(Math.random() * 10) + 1;
+        problemDisplay.textContent = `${a} + ${b}`;
+        return a + b;
+    }
 
-    setInterval(() => {
-        points -= 0.1;
+    let correctAnswer = generateProblem();
+
+    document.getElementById("solve").addEventListener("click", () => {
+        if (parseInt(answerInput.value) === correctAnswer) {
+            points += 5;
+            logEvent("Poprawna odpowiedź! Otrzymujesz 5 punktów.");
+            correctSound.play();
+        } else {
+            logEvent("Błędna odpowiedź!");
+            wrongSound.play();
+        }
+        answerInput.value = "";
+        correctAnswer = generateProblem();
         updateDisplay();
-    }, 1000);
+    });
+
+    answerInput.addEventListener("keypress", (event) => {
+        if (event.key === "Enter") {
+            document.getElementById("solve").click();
+        }
+    });
+
+    Object.keys(units).forEach(unit => {
+        document.getElementById(`send-${unit}`).addEventListener("click", () => {
+            if (points >= units[unit].cost) {
+                points -= units[unit].cost;
+                units[unit].count++;
+                logEvent(`Wysłano ${unit} na pole bitwy.`);
+                updateDisplay();
+            } else {
+                logEvent("Za mało punktów!");
+            }
+        });
+
+        document.getElementById(`upgrade-${unit}`).addEventListener("click", () => {
+            if (points >= units[unit].upgradeCost) {
+                points -= units[unit].upgradeCost;
+                units[unit].attack += 3;
+                units[unit].level++;
+                units[unit].upgradeCost += 10;
+                logEvent(`${unit} został ulepszony do poziomu ${units[unit].level}!`);
+                updateDisplay();
+            } else {
+                logEvent("Za mało punktów na ulepszenie!");
+            }
+        });
+    });
+
+    document.getElementById("repair-wall").addEventListener("click", () => {
+        if (points >= 30) {
+            points -= 30;
+            wallHealth = Math.min(100, wallHealth + 20);
+            logEvent("Naprawiono mury!");
+            updateDisplay();
+        } else {
+            logEvent("Za mało punktów na naprawę!");
+        }
+    });
+
+    function enemyAttack() {
+        if (wallHealth > 0) {
+            wallHealth -= Math.max(1, enemies.length * 2);
+            logEvent("Wróg atakuje mury!");
+            updateDisplay();
+        }
+    }
+
+    setInterval(enemyAttack, 5000);
+    setInterval(() => { points = Math.max(0, points - 0.1); updateDisplay(); }, 1000);
 
     updateDisplay();
-    generateMathProblem();
 });
