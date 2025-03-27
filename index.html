@@ -4,52 +4,100 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gra Matematyczna - Obrona Miasta</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .stats, .units, .log, .upgrade {
+            margin: 20px;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        .stats div, .units div, .upgrade div {
+            margin-bottom: 10px;
+        }
+        .btn {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .log {
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 14px;
+        }
+        #event-log div {
+            margin-bottom: 8px;
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <h1>Gra Matematyczna - Obrona Miasta</h1>
-    </header>
+    <div class="container">
+        <h1>Obrona Miasta</h1>
 
-    <main>
-        <section id="game">
-            <h2>Wybierz jednostkę do wysłania</h2>
-            <div>
-                <button onclick="sendUnit('warrior')">Wyślij Wojownika (10 punktów)</button>
-                <button onclick="sendUnit('archer')">Wyślij Łucznika (20 punktów)</button>
-                <button onclick="sendUnit('pikeman')">Wyślij Pikiniera (20 punktów)</button>
-                <button onclick="sendUnit('knight')">Wyślij Rycerza (40 punktów)</button>
-                <button onclick="sendUnit('catapult')">Wyślij Katapultę (50 punktów)</button>
-                <button onclick="sendUnit('mage')">Wyślij Maga (60 punktów)</button>
-            </div>
+        <!-- Sekcja z wynikami -->
+        <div class="stats">
+            <div id="points">Punkty: 0</div>
+            <div id="wall-health">Zdrowie murów: 100</div>
+        </div>
 
-            <h3>Ulepsz jednostki</h3>
-            <div>
-                <button onclick="upgradeUnit('warrior')">Ulepsz Wojownika (30 punktów)</button>
-                <button onclick="upgradeUnit('archer')">Ulepsz Łucznika (40 punktów)</button>
-                <button onclick="upgradeUnit('knight')">Ulepsz Rycerza (50 punktów)</button>
-            </div>
+        <!-- Sekcja z matematycznym zadaniem -->
+        <div class="math">
+            <div id="problem">5 + 3 = ?</div>
+            <input type="number" id="answer" placeholder="Podaj odpowiedź" />
+            <button class="btn" onclick="solveMathProblem()">Sprawdź odpowiedź</button>
+        </div>
 
-            <h2>Rozwiązuj zadania matematyczne</h2>
-            <div id="math-problem">
-    <p id="problem">5 + 3 = ?</p>
-    <input type="number" id="answer" placeholder="Wpisz odpowiedź">
-    <button onclick="solveMathProblem()">Sprawdź odpowiedź</button>
-</div>
+        <!-- Sekcja jednostek -->
+        <div class="units">
+            <h3>Jednostki:</h3>
+            <button id="warriorButton" class="btn">Wojownik (10 punktów)</button>
+            <button id="archerButton" class="btn">Łucznik (20 punktów)</button>
+            <button id="pikemanButton" class="btn">Pikinier (20 punktów)</button>
+            <button id="knightButton" class="btn">Rycerz (40 punktów)</button>
+            <button id="catapultButton" class="btn">Katapulta (50 punktów)</button>
+            <button id="mageButton" class="btn">Mag (60 punktów)</button>
+        </div>
 
-        </section>
+        <!-- Sekcja ulepszania jednostek -->
+        <div class="upgrade">
+            <h3>Ulepszenia:</h3>
+            <button id="upgradeWarriorButton" class="btn">Ulepsz Wojownika</button>
+            <button id="upgradeArcherButton" class="btn">Ulepsz Łucznika</button>
+            <button id="upgradeKnightButton" class="btn">Ulepsz Rycerza</button>
+        </div>
 
-        <section id="status">
-            <h2>Stan gry</h2>
-            <p id="points">Punkty: 0</p>
-            <p id="wall-health">Zdrowie murów: 100</p>
-        </section>
+        <!-- Sekcja dziennika -->
+        <div class="log">
+            <h3>Dziennik Zdarzeń:</h3>
+            <div id="event-log"></div>
+        </div>
 
-        <section id="event-log">
-            <h2>Dziennik zdarzeń</h2>
-            <!-- Dziennik będzie wyświetlany tutaj -->
-        </section>
-    </main>
+        <!-- Sekcja statystyk jednostek -->
+        <div id="unit-stats">
+            <h3>Statystyki Jednostek:</h3>
+        </div>
+    </div>
 
     <script src="game.js"></script>
 </body>
