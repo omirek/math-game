@@ -3,43 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gra Matematyczna - Wersja 1.5</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Gra Strategiczna - Wersja 1.5</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        header {
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 10px;
+        }
+
+        main {
+            display: flex;
+            flex-grow: 1;
+            padding: 20px;
+        }
+
+        .panel {
+            width: 25%;
+            padding: 10px;
+            margin: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .game-area {
+            width: 50%;
+            padding: 10px;
+            margin: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        #event-log {
+            overflow-y: auto;
+            height: 200px;
+            border: 1px solid #ccc;
+            padding: 5px;
+            margin-top: 10px;
+        }
+
+        #problem {
+            font-size: 1.5rem;
+            margin: 10px;
+        }
+
+        #answer {
+            font-size: 1.5rem;
+            padding: 5px;
+        }
+
+        #solve {
+            padding: 10px;
+            margin-top: 10px;
+            cursor: pointer;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        #solve:hover {
+            background-color: #218838;
+        }
+
+        button {
+            padding: 10px;
+            margin: 5px;
+            width: 100%;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .unit-stats {
+            font-size: 1.2rem;
+        }
+
+        .unit-button {
+            margin-top: 10px;
+        }
+
+        .panel h3 {
+            text-align: center;
+        }
+
+        .enemy-count {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+    </style>
 </head>
 <body>
-    <div id="title-bar">Gra Matematyczna - Wersja 1.5</div>
+    <header>
+        <h1>Gra Strategiczna - Wersja 1.5</h1>
+    </header>
 
-    <div id="game-container">
-        <div id="unit-panel">
-            <div id="warrior-stats"></div>
-            <button id="send-warrior">Kup Wojownika (15 punktów)</button>
-            <button id="upgrade-warrior">Ulepsz Wojownika (20 punktów)</button>
+    <main>
+        <!-- Panel jednostek -->
+        <div class="panel" id="units-panel">
+            <h3>Jednostki</h3>
+            <div class="unit-stats" id="warrior-stats"></div>
+            <button id="send-warrior" class="unit-button">Kup Wojownika</button>
+            <button id="upgrade-warrior" class="unit-button">Ulepsz Wojownika</button>
 
-            <div id="archer-stats"></div>
-            <button id="send-archer">Kup Łucznika (20 punktów)</button>
-            <button id="upgrade-archer">Ulepsz Łucznika (30 punktów)</button>
+            <div class="unit-stats" id="archer-stats"></div>
+            <button id="send-archer" class="unit-button">Kup Łucznika</button>
+            <button id="upgrade-archer" class="unit-button">Ulepsz Łucznika</button>
 
-            <div id="pikeman-stats"></div>
-            <button id="send-pikeman">Kup Pikiniera (25 punktów)</button>
-            <button id="upgrade-pikeman">Ulepsz Pikiniera (40 punktów)</button>
+            <div class="unit-stats" id="pikeman-stats"></div>
+            <button id="send-pikeman" class="unit-button">Kup Pikemana</button>
+            <button id="upgrade-pikeman" class="unit-button">Ulepsz Pikemana</button>
+
+            <button id="repair-wall" class="unit-button">Napraw Mury</button>
         </div>
 
-        <div id="main-area">
-            <div id="wall-health"></div>
+        <!-- Strefa gry -->
+        <div class="game-area">
             <div id="problem"></div>
-            <input type="number" id="answer">
-            <button id="solve">Sprawdź odpowiedź</button>
-            <div id="enemy-count"></div>
-        </div>
+            <input type="number" id="answer" placeholder="Podaj odpowiedź">
+            <button id="solve">Rozwiąż Zadanie</button>
 
-        <div id="event-log-panel">
+            <div class="stats">
+                <div id="points">Punkty: 100</div>
+                <div id="wall-health">Zdrowie Murów: 100</div>
+            </div>
+
+            <div id="enemy-count">Liczba wrogów: 0</div>
             <div id="event-log"></div>
-            <button id="repair-wall">Napraw Mury (30 punktów)</button>
         </div>
-    </div>
 
-    <audio id="correct-sound" src="correct-sound.mp3"></audio>
-    <audio id="wrong-sound" src="wrong-sound.mp3"></audio>
+        <!-- Panel dziennika -->
+        <div class="panel" id="log-panel">
+            <h3>Dziennik</h3>
+            <div id="event-log"></div>
+        </div>
+    </main>
+
+    <!-- Dźwięki -->
+    <audio id="correct-sound" src="correct-answer-sound.mp3"></audio>
+    <audio id="wrong-sound" src="wrong-answer-sound.mp3"></audio>
 
     <script src="game.js"></script>
 </body>
