@@ -3,29 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Obrona Miasta: Matematyczna Bitwa</title>
+    <title>Gra Matematyczna - Obrona Miasta</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Obrona Miasta: Matematyczna Bitwa</h1>
-    <div id="game-area">
-        <div id="walls">
-            <p>Mury: <span id="walls-health">100</span></p>
-        </div>
-        <div id="enemy-wave">
-            <p>Wroga fala: <span id="enemy-count">5</span></p>
-        </div>
-        <div id="math-task">
-            <p id="task">Rozwiąż zadanie:</p>
-            <input type="text" id="answer" placeholder="Podaj odpowiedź">
-            <button id="submit-answer">Wyślij odpowiedź</button>
-        </div>
-        <div id="units">
-            <button id="send-swordsman">Wyślij wojownika (koszt: 10 punktów)</button>
-            <button id="send-archer">Wyślij łucznika (koszt: 20 punktów)</button>
-        </div>
-        <p id="score">Punkty: <span id="points">0</span></p>
-    </div>
+    <header>
+        <h1>Gra Matematyczna - Obrona Miasta</h1>
+    </header>
+
+    <main>
+        <section id="game">
+            <h2>Wybierz jednostkę do wysłania</h2>
+            <div>
+                <button onclick="sendUnit('warrior')">Wyślij Wojownika (10 punktów)</button>
+                <button onclick="sendUnit('archer')">Wyślij Łucznika (20 punktów)</button>
+                <button onclick="sendUnit('pikeman')">Wyślij Pikiniera (20 punktów)</button>
+                <button onclick="sendUnit('knight')">Wyślij Rycerza (40 punktów)</button>
+                <button onclick="sendUnit('catapult')">Wyślij Katapultę (50 punktów)</button>
+                <button onclick="sendUnit('mage')">Wyślij Maga (60 punktów)</button>
+            </div>
+
+            <h3>Ulepsz jednostki</h3>
+            <div>
+                <button onclick="upgradeUnit('warrior')">Ulepsz Wojownika (30 punktów)</button>
+                <button onclick="upgradeUnit('archer')">Ulepsz Łucznika (40 punktów)</button>
+                <button onclick="upgradeUnit('knight')">Ulepsz Rycerza (50 punktów)</button>
+            </div>
+
+            <h2>Rozwiązuj zadania matematyczne</h2>
+            <div id="math-problem">
+                <p id="problem">5 + 3 = ?</p>
+                <input type="number" id="answer" placeholder="Wpisz odpowiedź">
+                <button onclick="solveMathProblem()">Sprawdź odpowiedź</button>
+            </div>
+        </section>
+
+        <section id="status">
+            <h2>Stan gry</h2>
+            <p id="points">Punkty: 0</p>
+            <p id="wall-health">Zdrowie murów: 100</p>
+        </section>
+
+        <section id="event-log">
+            <h2>Dziennik zdarzeń</h2>
+            <!-- Dziennik będzie wyświetlany tutaj -->
+        </section>
+    </main>
+
     <script src="game.js"></script>
 </body>
 </html>
