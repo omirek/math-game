@@ -3,50 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Obrona Miasta - v1.5</title>
+    <title>Gra Matematyczna - Wersja 1.5</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Obrona Miasta - v1.5</h1>
+    <div id="title-bar">Gra Matematyczna - Wersja 1.5</div>
 
-    <div class="stats">
-        <p id="points">Punkty: 100</p>
-        <p id="wall-health">Zdrowie murów: 100</p>
-    </div>
+    <div id="game-container">
+        <div id="unit-panel">
+            <div id="warrior-stats"></div>
+            <button id="send-warrior">Kup Wojownika (15 punktów)</button>
+            <button id="upgrade-warrior">Ulepsz Wojownika (20 punktów)</button>
 
-    <h2>Rozwiąż zadanie</h2>
-    <div class="math">
-        <p id="problem">Ładowanie...</p>
-        <input type="number" id="answer">
-        <button id="solve">OK</button>
-    </div>
+            <div id="archer-stats"></div>
+            <button id="send-archer">Kup Łucznika (20 punktów)</button>
+            <button id="upgrade-archer">Ulepsz Łucznika (30 punktów)</button>
 
-    <h2>Jednostki</h2>
-    <div class="units">
-        <div>
-            <button id="send-warrior">Wojownik - Poziom 1 (Koszt: 15 pkt)</button>
-            <button id="upgrade-warrior">Ulepsz Wojownika (Koszt: <span id="upgrade-warrior-cost">20</span> pkt)</button>
-            <p id="warrior-stats">Atak: 5, Ilość: 0</p>
+            <div id="pikeman-stats"></div>
+            <button id="send-pikeman">Kup Pikiniera (25 punktów)</button>
+            <button id="upgrade-pikeman">Ulepsz Pikiniera (40 punktów)</button>
         </div>
-        <div>
-            <button id="send-archer">Łucznik - Poziom 1 (Koszt: 20 pkt)</button>
-            <button id="upgrade-archer">Ulepsz Łucznika (Koszt: <span id="upgrade-archer-cost">30</span> pkt)</button>
-            <p id="archer-stats">Atak: 8, Ilość: 0</p>
+
+        <div id="main-area">
+            <div id="wall-health"></div>
+            <div id="problem"></div>
+            <input type="number" id="answer">
+            <button id="solve">Sprawdź odpowiedź</button>
+            <div id="enemy-count"></div>
         </div>
-        <div>
-            <button id="send-pikeman">Pikinier - Poziom 1 (Koszt: 25 pkt)</button>
-            <button id="upgrade-pikeman">Ulepsz Pikiniera (Koszt: <span id="upgrade-pikeman-cost">40</span> pkt)</button>
-            <p id="pikeman-stats">Atak: 10, Ilość: 0</p>
+
+        <div id="event-log-panel">
+            <div id="event-log"></div>
+            <button id="repair-wall">Napraw Mury (30 punktów)</button>
         </div>
     </div>
 
-    <button id="repair-wall">Napraw Mury (Koszt: 30 pkt)</button>
-
-    <h2>Dziennik wydarzeń</h2>
-    <div id="event-log"></div>
-
-    <audio id="correct-sound" src="correct.mp3"></audio>
-    <audio id="wrong-sound" src="wrong.mp3"></audio>
+    <audio id="correct-sound" src="correct-sound.mp3"></audio>
+    <audio id="wrong-sound" src="wrong-sound.mp3"></audio>
 
     <script src="game.js"></script>
 </body>
