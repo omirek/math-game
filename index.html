@@ -49,6 +49,14 @@
         #event-log div {
             margin-bottom: 8px;
         }
+        .unit-stats {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .unit-stats div {
+            width: 30%;
+        }
     </style>
 </head>
 <body>
@@ -79,23 +87,23 @@
             <button id="mageButton" class="btn">Mag (60 punktów)</button>
         </div>
 
+        <!-- Sekcja statystyk jednostek -->
+        <div id="unit-stats" class="unit-stats">
+            <!-- Będą tu wyświetlane statystyki jednostek -->
+        </div>
+
         <!-- Sekcja ulepszania jednostek -->
         <div class="upgrade">
             <h3>Ulepszenia:</h3>
-            <button id="upgradeWarriorButton" class="btn">Ulepsz Wojownika</button>
-            <button id="upgradeArcherButton" class="btn">Ulepsz Łucznika</button>
-            <button id="upgradeKnightButton" class="btn">Ulepsz Rycerza</button>
+            <button id="upgradeWarriorButton" class="btn">Ulepsz Wojownika (20 punktów)</button>
+            <button id="upgradeArcherButton" class="btn">Ulepsz Łucznika (30 punktów)</button>
+            <button id="upgradeKnightButton" class="btn">Ulepsz Rycerza (40 punktów)</button>
         </div>
 
         <!-- Sekcja dziennika -->
         <div class="log">
             <h3>Dziennik Zdarzeń:</h3>
             <div id="event-log"></div>
-        </div>
-
-        <!-- Sekcja statystyk jednostek -->
-        <div id="unit-stats">
-            <h3>Statystyki Jednostek:</h3>
         </div>
     </div>
 
