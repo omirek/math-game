@@ -1,78 +1,86 @@
-let wallsHealth = 100;
+// Zmienne globalne
 let points = 0;
-let currentTask = "";
-let correctAnswer = 0;
-let enemyCount = 5;
-let mathDifficulty = 10;
+let wallHealth = 100;
+let units = {
+    warrior: { name: "Wojownik", cost: 10, upgraded: false },
+    archer: { name: "Łucznik", cost: 20, upgraded: false },
+    pikeman: { name: "Pikinier", cost: 20, upgraded: false },
+    knight: { name: "Rycerz", cost: 40, upgraded: false },
+    catapult: { name: "Katapulta", cost: 50, upgraded: false },
+    mage: { name: "Mag", cost: 60, upgraded: false }
+};
 
-// Funkcja generująca zadanie matematyczne
-function generateMathTask() {
-    let num1 = Math.floor(Math.random() * mathDifficulty) + 1;
-    let num2 = Math.floor(Math.random() * mathDifficulty) + 1;
-    currentTask = `${num1} + ${num2}`;
-    correctAnswer = num1 + num2;
-    document.getElementById("task").textContent = `Rozwiąż: ${currentTask}`;
+let eventLog = []; // Dziennik zdarzeń
+
+// Funkcja logowania wydarzeń
+function logEvent(message) {
+    eventLog.push(message);
+    updateEventLog();
 }
 
-// Funkcja sprawdzająca odpowiedź
-document.getElementById("submit-answer").addEventListener("click", function() {
-    let userAnswer = parseInt(document.getElementById("answer").value);
-    if (userAnswer === correctAnswer) {
+// Funkcja aktualizacji dziennika
+function updateEventLog() {
+    const logContainer = document.getElementById('event-log');
+    logContainer.innerHTML = '';  // Wyczyść zawartość dziennika
+    eventLog.forEach(event => {
+        let logEntry = document.createElement('div');
+        logEntry.textContent = event;
+        logContainer.appendChild(logEntry);
+    });
+}
+
+// Funkcja rozwiązywania zadania matematycznego
+function solveMathProblem() {
+    const answerInput = document.getElementById('answer');
+    const answer = parseInt(answerInput.value);
+    const correctAnswer = 8 + 4; // Przykładowe zadanie: 5 + 3
+
+    if (answer === correctAnswer) {
         points += 10;
-        document.getElementById("points").textContent = points;
-        alert("Dobrze! Możesz wysłać jednostki.");
-        generateMathTask();
+        logEvent(`Rozwiązano zadanie: 8 + 4 = 12`);
+        updateStatus();
     } else {
-        alert("Źle! Spróbuj ponownie.");
+        logEvent(`Błędna odpowiedź! Spróbuj ponownie.`);
     }
-});
+    answerInput.value = ''; // Wyczyść pole odpowiedzi
+}
 
-// Funkcje do wysyłania jednostek
-document.getElementById("send-swordsman").addEventListener("click", function() {
-    if (points >= 10) {
-        points -= 10;
-        document.getElementById("points").textContent = points;
-        alert("Wysłano wojownika!");
-        enemyCount--;
-        checkGameStatus();
-    } else {
-        alert("Nie masz wystarczających punktów.");
-    }
-});
-
-document.getElementById("send-archer").addEventListener("click", function() {
-    if (points >= 20) {
-        points -= 20;
-        document.getElementById("points").textContent = points;
-        alert("Wysłano łucznika!");
-        enemyCount--;
-        checkGameStatus();
-    } else {
-        alert("Nie masz wystarczających punktów.");
-    }
-});
-
-// Funkcja sprawdzająca status gry
-function checkGameStatus() {
-    if (enemyCount <= 0) {
-        alert("Wygrałeś bitwę!");
-        resetGame();
-    } else if (wallsHealth <= 0) {
-        alert("Mury zostały zniszczone! Przegrałeś.");
-        resetGame();
+// Funkcja wysyłania jednostki
+function sendUnit(unitName) {
+    if (units[unitName]) {
+        let unit = units[unitName];
+        if (points >= unit.cost) {
+            points -= unit.cost;
+            logEvent(`${unit.name} został wysłany do obrony!`);
+            updateStatus();
+        } else {
+            logEvent(`Nie masz wystarczająco punktów na wysłanie ${unit.name}.`);
+        }
     }
 }
 
-// Funkcja resetująca grę
-function resetGame() {
-    wallsHealth = 100;
-    points = 0;
-    enemyCount = 5;
-    mathDifficulty = 10;
-    document.getElementById("walls-health").textContent = wallsHealth;
-    document.getElementById("enemy-count").textContent = enemyCount;
-    document.getElementById("points").textContent = points;
-    generateMathTask();
+// Funkcja ulepszania jednostki
+function upgradeUnit(unitName) {
+    if (units[unitName]) {
+        let unit = units[unitName];
+        let upgradeCost = 0;
+        if (unitName === 'warrior' && !unit.upgraded) upgradeCost = 30;
+        if (unitName === 'archer' && !unit.upgraded) upgradeCost = 40;
+        if (unitName === 'knight' && !unit.upgraded) upgradeCost = 50;
+
+        if (points >= upgradeCost) {
+            points -= upgradeCost;
+            unit.upgraded = true;
+            logEvent(`${unit.name} został ulepszony!`);
+            updateStatus();
+        } else {
+            logEvent(`Nie masz wystarczająco punktów na ulepszenie ${unit.name}.`);
+        }
+    }
 }
 
-generateMathTask();  // Uruchamiamy pierwsze zadanie matematyczne
+// Funkcja aktualizacji stanu gry
+function updateStatus() {
+    document.getElementById('points').textContent = `Punkty: ${points}`;
+    document.getElementById('wall-health').textContent = `Zdrowie murów: ${wallHealth}`;
+}
