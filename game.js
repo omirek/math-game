@@ -40,6 +40,8 @@ document.addEventListener("DOMContentLoaded", function () {
             logEvent(`Wysłałeś ${type} do obrony.`);
             units[type].count--;
             enemyAttack();
+        } else {
+            logEvent(`Nie masz dostępnych jednostek: ${type}`);
         }
         updateDisplay();
     }
