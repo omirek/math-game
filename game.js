@@ -3,9 +3,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let wallHealth = 100;
     let enemies = [{ health: 50, attack: 2 }];
     let units = {
-        warrior: { attack: 5, cost: 15, upgradeCost: 20, level: 1, count: 0 },
-        archer: { attack: 8, cost: 20, upgradeCost: 30, level: 1, count: 0 },
-        pikeman: { attack: 10, cost: 25, upgradeCost: 40, level: 1, count: 0 }
+        warrior: { attack: 5, cost: 15, upgradeCost: 20, level: 1, count: 0, health: 30 },
+        archer: { attack: 8, cost: 20, upgradeCost: 30, level: 1, count: 0, health: 20 },
+        pikeman: { attack: 10, cost: 25, upgradeCost: 40, level: 1, count: 0, health: 40 }
     };
 
     const pointsDisplay = document.getElementById("points");
@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const answerInput = document.getElementById("answer");
     const correctSound = document.getElementById("correct-sound");
     const wrongSound = document.getElementById("wrong-sound");
+    const enemyDisplay = document.getElementById("enemy-count");
 
     function logEvent(message) {
         eventLog.innerHTML = `<p>${message}</p>` + eventLog.innerHTML;
@@ -23,9 +24,11 @@ document.addEventListener("DOMContentLoaded", () => {
     function updateDisplay() {
         pointsDisplay.textContent = `Punkty: ${points.toFixed(1)}`;
         wallDisplay.textContent = `Zdrowie murów: ${wallHealth}`;
+        enemyDisplay.textContent = `Wrógów: ${enemies.length}`;
+
         Object.keys(units).forEach(unit => {
             document.getElementById(`${unit}-stats`).textContent = 
-                `Atak: ${units[unit].attack}, Ilość: ${units[unit].count}, Poziom: ${units[unit].level}`;
+                `Atak: ${units[unit].attack}, Ilość: ${units[unit].count}, Poziom: ${units[unit].level}, Zdrowie: ${units[unit].health}`;
         });
     }
 
@@ -76,6 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 units[unit].attack += 3;
                 units[unit].level++;
                 units[unit].upgradeCost += 10;
+                units[unit].health += 5;
                 logEvent(`${unit} został ulepszony do poziomu ${units[unit].level}!`);
                 updateDisplay();
             } else {
@@ -100,6 +104,12 @@ document.addEventListener("DOMContentLoaded", () => {
             let totalAttack = enemies.reduce((sum, enemy) => sum + enemy.attack, 0);
             wallHealth -= totalAttack;
             logEvent(`Wróg atakuje mury za ${totalAttack} obrażeń!`);
+            if (wallHealth <= 0) {
+                logEvent("Mury zostały zniszczone! Przegrana!");
+                wallHealth = 0;
+                updateDisplay();
+                // Game over logic here, maybe stop intervals or trigger game over screen
+            }
             updateDisplay();
         }
     }
@@ -109,8 +119,8 @@ document.addEventListener("DOMContentLoaded", () => {
         logEvent("Nowy wróg pojawił się na polu bitwy!");
     }
 
-    setInterval(enemyAttack, 5000);
-    setInterval(spawnEnemy, 10000);
+    setInterval(enemyAttack, 8000);  // Reduced attack frequency
+    setInterval(spawnEnemy, 15000);  // Reduced spawn frequency
     setInterval(() => { points = Math.max(0, points - 0.1); updateDisplay(); }, 1000);
 
     updateDisplay();
