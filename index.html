@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obrona Miasta: Matematyczna Bitwa</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Obrona Miasta: Matematyczna Bitwa</h1>
+    <div id="game-area">
+        <div id="walls">
+            <p>Mury: <span id="walls-health">100</span></p>
+        </div>
+        <div id="enemy-wave">
+            <p>Wroga fala: <span id="enemy-count">5</span></p>
+        </div>
+        <div id="math-task">
+            <p id="task">Rozwiąż zadanie:</p>
+            <input type="text" id="answer" placeholder="Podaj odpowiedź">
+            <button id="submit-answer">Wyślij odpowiedź</button>
+        </div>
+        <div id="units">
+            <button id="send-swordsman">Wyślij wojownika (koszt: 10 punktów)</button>
+            <button id="send-archer">Wyślij łucznika (koszt: 20 punktów)</button>
+        </div>
+        <p id="score">Punkty: <span id="points">0</span></p>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
