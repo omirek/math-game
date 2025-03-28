@@ -77,12 +77,28 @@ button:hover {
 
 #battlefield {
     display: flex;
-    justify-content: space-around;
-    align-items: center;
-    width: 80%;
+    flex-direction: column;  /* Ustawia elementy w kolumnie */
+    align-items: center;     /* Centruje wszystkie elementy wewnątrz kontenera */
+    width: 100%;
     margin-top: 20px;
     padding: 20px;
     background: #ddd;
+    border-radius: 10px;
+}
+
+#battlefield-area {
+    display: flex;
+    justify-content: space-between; /* Rozstawia obrońców i wrogów na całej szerokości */
+    width: 100%;
+    height: 300px; /* Wysokość pola bitwy */
+    position: relative;
+}
+
+#field {
+    width: 50%;
+    background-color: #f0f0f0;
+    position: relative;
+    border: 1px solid #ccc;
     border-radius: 10px;
 }
 
@@ -99,7 +115,9 @@ button:hover {
 
 /* Pasek zdrowia murów */
 #wall-container {
+    width: 100%;
     text-align: center;
+    margin-bottom: 20px;  /* Dodany margines na dole */
 }
 
 #wall-bar {
@@ -117,11 +135,30 @@ button:hover {
 }
 
 /* Obrońcy i wrogowie */
+
+#defenders {
+    width: 25%; /* Określa szerokość obrońców */
+    text-align: center; /* Wyśrodkowanie tekstu */
+}
+
+#enemies {
+    width: 25%; /* Określa szerokość wrogów */
+    text-align: center; /* Wyśrodkowanie tekstu */
+}
+
 /* Obrońcy i wrogowie */
-#defender-icons, #enemy-icons {
+#defender-icons {
     display: flex;
-    gap: 10px; /* Jeśli chcesz większy odstęp między ikonami */
-    flex-wrap: wrap;  /* Pozwoli to na zawijanie ikon, jeśli jest ich dużo */
+    justify-content: center; /* Wyśrodkowanie ikon */
+    gap: 10px; /* Przestrzeń między ikonami */
+    flex-wrap: wrap; /* Pozwala na zawijanie ikon do nowego wiersza */
+}
+
+#enemy-icons {
+    display: flex;
+    justify-content: center; /* Wyśrodkowanie ikon */
+    gap: 10px; /* Przestrzeń między ikonami */
+    flex-wrap: wrap; /* Pozwala na zawijanie ikon do nowego wiersza */
 }
 
 /* Styl dla pojedynczej ikony obrońcy */
