@@ -110,10 +110,6 @@ function enemyAttack() {
     updateUI();
 }
 
-
-    updateUI();
-}
-
     function updateHealthBars() {
     const defenderIcons = document.querySelectorAll("#defender-icons .defender-icon");
 
