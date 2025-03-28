@@ -6,13 +6,17 @@ document.addEventListener("DOMContentLoaded", () => {
         archer: { level: 1, attack: 8, cost: 20, upgradeCost: 30, count: 0 }
     };
     let enemies = [];
-    let currentProblem = {};
+    let currentProblem = {}; // Poprawiona deklaracja zmiennej
 
     function logEvent(message) {
         const logEntries = document.getElementById("log-entries");
-        const entry = document.createElement("div");
-        entry.textContent = message;
-        logEntries.prepend(entry);
+        if (logEntries) { // Sprawdzenie czy element istnieje
+            const entry = document.createElement("div");
+            entry.textContent = message;
+            logEntries.prepend(entry);
+        } else {
+            console.error("Element log-entries nie istnieje w HTML.");
+        }
     }
 
     function updateUI() {
@@ -26,6 +30,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function solveMathProblem() {
         const answer = parseInt(document.getElementById("answer").value, 10);
+        if (!currentProblem.solution) {
+            console.error("Błąd: Brak wygenerowanego problemu matematycznego.");
+            return;
+        }
         if (answer === currentProblem.solution) {
             points += 10;
             logEvent("Poprawna odpowiedź! Otrzymujesz 10 punktów.");
@@ -43,7 +51,12 @@ document.addEventListener("DOMContentLoaded", () => {
             question: `${num1} + ${num2}`,
             solution: num1 + num2
         };
-        document.getElementById("problem").textContent = currentProblem.question;
+        const problemElement = document.getElementById("problem");
+        if (problemElement) {
+            problemElement.textContent = currentProblem.question;
+        } else {
+            console.error("Element problem nie istnieje w HTML.");
+        }
     }
 
     function recruitUnit(type) {
@@ -69,11 +82,11 @@ document.addEventListener("DOMContentLoaded", () => {
         updateUI();
     }
 
-    document.getElementById("solve").addEventListener("click", solveMathProblem);
-    document.getElementById("recruit-warrior").addEventListener("click", () => recruitUnit("warrior"));
-    document.getElementById("recruit-archer").addEventListener("click", () => recruitUnit("archer"));
-    document.getElementById("upgrade-warrior").addEventListener("click", () => upgradeUnit("warrior"));
-    document.getElementById("upgrade-archer").addEventListener("click", () => upgradeUnit("archer"));
+    document.getElementById("solve")?.addEventListener("click", solveMathProblem);
+    document.getElementById("recruit-warrior")?.addEventListener("click", () => recruitUnit("warrior"));
+    document.getElementById("recruit-archer")?.addEventListener("click", () => recruitUnit("archer"));
+    document.getElementById("upgrade-warrior")?.addEventListener("click", () => upgradeUnit("warrior"));
+    document.getElementById("upgrade-archer")?.addEventListener("click", () => upgradeUnit("archer"));
 
     generateMathProblem();
     updateUI();
