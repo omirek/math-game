@@ -86,6 +86,17 @@ button:hover {
     border-radius: 10px;
 }
 
+#points-display {
+    font-size: 18px; /* Ustawia rozmiar czcionki */
+    font-weight: bold; /* Wyróżnia tekst pogrubieniem */
+    color: #333; /* Kolor tekstu */
+    margin-bottom: 10px; /* Odstęp od innych elementów */
+    padding: 5px; /* Daje trochę przestrzeni wokół tekstu */
+    background-color: #f4f4f4; /* Tło w jasnym kolorze */
+    border-radius: 5px; /* Zaokrąglone rogi */
+    text-align: center; /* Wyśrodkowanie tekstu */
+}
+
 /* Pasek zdrowia murów */
 #wall-container {
     text-align: center;
