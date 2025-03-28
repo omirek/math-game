@@ -77,21 +77,8 @@ button:hover {
 
 #battlefield {
     display: flex;
-    flex-direction: column;  /* Ustawia elementy w kolumnie */
-    align-items: center;     /* Centruje wszystkie elementy wewnątrz kontenera */
-    width: 100%;
-    margin-top: 20px;
-    padding: 20px;
-    background: #ddd;
-    border-radius: 10px;
-}
-
-#battlefield-area {
-    display: flex;
-    justify-content: space-between; /* Rozstawia obrońców i wrogów na całej szerokości */
-    width: 100%;
-    height: 300px; /* Wysokość pola bitwy */
-    position: relative;
+    flex-direction: column;
+    gap: 20px;
 }
 
 #field {
@@ -100,6 +87,13 @@ button:hover {
     position: relative;
     border: 1px solid #ccc;
     border-radius: 10px;
+}
+
+#battlefield-field {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
 }
 
 #points-display {
@@ -136,28 +130,25 @@ button:hover {
 
 /* Obrońcy i wrogowie */
 
-#defenders {
-    width: 25%; /* Określa szerokość obrońców */
-    text-align: center; /* Wyśrodkowanie tekstu */
-}
-
-#enemies {
-    width: 25%; /* Określa szerokość wrogów */
-    text-align: center; /* Wyśrodkowanie tekstu */
+#defenders, #enemies {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 45%;
 }
 
 /* Obrońcy i wrogowie */
 #defender-icons {
     display: flex;
     justify-content: center; /* Wyśrodkowanie ikon */
-    gap: 10px; /* Przestrzeń między ikonami */
+    gap: 5px; /* Przestrzeń między ikonami */
     flex-wrap: wrap; /* Pozwala na zawijanie ikon do nowego wiersza */
 }
 
 #enemy-icons {
     display: flex;
     justify-content: center; /* Wyśrodkowanie ikon */
-    gap: 10px; /* Przestrzeń między ikonami */
+    gap: 5px; /* Przestrzeń między ikonami */
     flex-wrap: wrap; /* Pozwala na zawijanie ikon do nowego wiersza */
 }
 
