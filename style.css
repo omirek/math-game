@@ -117,16 +117,37 @@ button:hover {
 }
 
 /* Obrońcy i wrogowie */
+/* Obrońcy i wrogowie */
 #defender-icons, #enemy-icons {
     display: flex;
-    gap: 5px;
+    gap: 10px; /* Jeśli chcesz większy odstęp między ikonami */
+    flex-wrap: wrap;  /* Pozwoli to na zawijanie ikon, jeśli jest ich dużo */
 }
 
-.unit-icon {
+/* Styl dla pojedynczej ikony obrońcy */
+.defender-icon {
     width: 40px;
     height: 40px;
-    background: gray;
     border-radius: 50%;
+    background-color: #4CAF50;  /* Kolor dla obrońcy */
+}
+
+/* Styl dla wojowników */
+.defender-icon.warrior {
+    background-color: #4CAF50;  /* Zielona ikona dla wojownika */
+}
+
+/* Styl dla łuczników */
+.defender-icon.archer {
+    background-color: #FF9800;  /* Pomarańczowa ikona dla łucznika */
+}
+
+/* Jeśli będziesz chciał dodać styl dla wrogów, np. */
+.enemy-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #f44336;  /* Czerwony kolor dla wrogów */
 }
 
 /* Dziennik */
