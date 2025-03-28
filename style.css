@@ -121,11 +121,11 @@ button:hover {
 }
 
 #wall-bar {
-    width: 200px;
+    width: 80%;  /* Możesz dostosować szerokość paska */
+    background: #aaa;
     height: 20px;
-    background: red;
     border-radius: 10px;
-    overflow: hidden;
+    margin: 0 auto; /* Auto margin na lewej i prawej stronie, co wyśrodkowuje pasek */
 }
 
 #wall-bar-fill {
