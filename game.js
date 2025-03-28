@@ -80,6 +80,13 @@ function recruitUnit(unitType) {
     healthFill.style.width = `${healthPercentage}%`;
 }
 
+    function dealDamage(unitDiv, unitType, damage) {
+    units[unitType].health -= damage;
+    if (units[unitType].health < 0) units[unitType].health = 0;
+    
+    updateHealthBar(unitDiv, units[unitType].health, 100); // 100 = maksymalne zdrowie
+}
+
     function updateDefenderIcons() {
     const defenderIcons = document.getElementById("defender-icons");
     defenderIcons.innerHTML = '';  // Czyścimy poprzednią zawartość
