@@ -74,6 +74,11 @@ function recruitUnit(unitType) {
     }
 }
 
+    function updateHealthBar(unitDiv, currentHealth, maxHealth) {
+    const healthFill = unitDiv.querySelector(".health-fill");
+    const healthPercentage = (currentHealth / maxHealth) * 100;
+    healthFill.style.width = `${healthPercentage}%`;
+}
 
     function updateDefenderIcons() {
     const defenderIcons = document.getElementById("defender-icons");
