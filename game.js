@@ -2,9 +2,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let points = 100;
     let wallHealth = 100;
     let units = {
-        warrior: { level: 1, attack: 5, cost: 15, upgradeCost: 20, count: 0 },
-        archer: { level: 1, attack: 8, cost: 20, upgradeCost: 30, count: 0 }
-    };
+    warrior: { level: 1, attack: 5, cost: 15, upgradeCost: 20, count: 0, health: 100 },
+    archer: { level: 1, attack: 8, cost: 20, upgradeCost: 30, count: 0, health: 80 }
+};
     let enemies = [];
     let currentProblem = {}; // Poprawiona deklaracja zmiennej
 
@@ -81,18 +81,43 @@ function recruitUnit(unitType) {
 
     // Dodajemy ikony dla wojowników
     for (let i = 0; i < units.warrior.count; i++) {
-        const warriorIcon = document.createElement("div");
-        warriorIcon.classList.add("defender-icon", "warrior");
-        defenderIcons.appendChild(warriorIcon);
+        const warriorDiv = document.createElement("div");
+        warriorDiv.classList.add("defender-icon", "warrior");
+
+        // Pasek zdrowia
+        const healthBar = document.createElement("div");
+        healthBar.classList.add("health-bar");
+
+        const healthFill = document.createElement("div");
+        healthFill.classList.add("health-fill");
+        healthFill.style.width = "100%"; // Pełne zdrowie na start
+
+        healthBar.appendChild(healthFill);
+        warriorDiv.appendChild(healthBar);
+
+        defenderIcons.appendChild(warriorDiv);
     }
 
     // Dodajemy ikony dla łuczników
     for (let i = 0; i < units.archer.count; i++) {
-        const archerIcon = document.createElement("div");
-        archerIcon.classList.add("defender-icon", "archer");
-        defenderIcons.appendChild(archerIcon);
+        const archerDiv = document.createElement("div");
+        archerDiv.classList.add("defender-icon", "archer");
+
+        // Pasek zdrowia
+        const healthBar = document.createElement("div");
+        healthBar.classList.add("health-bar");
+
+        const healthFill = document.createElement("div");
+        healthFill.classList.add("health-fill");
+        healthFill.style.width = "100%";
+
+        healthBar.appendChild(healthFill);
+        archerDiv.appendChild(healthBar);
+
+        defenderIcons.appendChild(archerDiv);
     }
 }
+
 
     function upgradeUnit(type) {
         if (points >= units[type].upgradeCost) {
