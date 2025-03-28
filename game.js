@@ -58,19 +58,20 @@ function solveMathProblem() {
         }
     }
 
-// Funkcja rekrutująca jednostki, odejmująca punkty przy zakupie
-function recruitUnit(unit) {
-    console.log(`Punkty: ${points}, Koszt jednostki: ${unit.cost}`); // Dodane logowanie
+function recruitUnit(unitType) {
+    const unit = units[unitType]; // Pobieramy jednostkę na podstawie typu (np. "warrior", "archer")
+    
     if (points >= unit.cost) {
-        points -= unit.cost; // Odejmujemy punkty przy rekrutacji
-        unit.count++;
-        logEvent(`Zrekrutowano ${unit.count} jednostek ${unit.name}`);
+        points -= unit.cost;
+        unit.count++; // Zwiększamy liczbę jednostek
+        logEvent(`Zrekrutowano jednostkę: ${unitType}.`);
+        logEvent(`Pozostałe punkty: ${points}`);
+        updateUI();
+        updatePointsDisplay();
     } else {
         logEvent("Nie masz wystarczającej ilości punktów.");
     }
-    updatePointsDisplay(); // Zaktualizowanie wyświetlania punktów
 }
-
 
     function upgradeUnit(type) {
         if (points >= units[type].upgradeCost) {
