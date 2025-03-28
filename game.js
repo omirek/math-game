@@ -94,8 +94,9 @@ function enemyAttack() {
             if (target.health <= 0) {
                 units[target.type].count--;
                 logEvent(`Obrońca (${target.type}) został pokonany!`);
-                updateDefenderIcons();
             }
+
+            updateHealthBars(); // Nowa funkcja do aktualizacji pasków zdrowia
         } else {
             wallHealth -= enemy.attack;
             logEvent(`Wróg uderzył w mury! Pozostałe HP murów: ${wallHealth}`);
@@ -104,6 +105,32 @@ function enemyAttack() {
 
     updateUI();
 }
+
+    function updateHealthBars() {
+    const defenderIcons = document.querySelectorAll("#defender-icons .defender-icon");
+
+    let warriorIndex = 0;
+    let archerIndex = 0;
+
+    defenderIcons.forEach(icon => {
+        let healthFill = icon.querySelector(".health-fill");
+
+        if (icon.classList.contains("warrior")) {
+            if (warriorIndex < units.warrior.instances.length) {
+                const warrior = units.warrior.instances[warriorIndex];
+                healthFill.style.width = `${(warrior.health / warrior.maxHealth) * 100}%`;
+                warriorIndex++;
+            }
+        } else if (icon.classList.contains("archer")) {
+            if (archerIndex < units.archer.instances.length) {
+                const archer = units.archer.instances[archerIndex];
+                healthFill.style.width = `${(archer.health / archer.maxHealth) * 100}%`;
+                archerIndex++;
+            }
+        }
+    });
+}
+
 
 function findWeakestDefender() {
     let weakest = null;
