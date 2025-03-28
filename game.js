@@ -30,21 +30,18 @@ document.addEventListener("DOMContentLoaded", () => {
 }
 
 
-    function solveMathProblem() {
-        const answer = parseInt(document.getElementById("answer").value, 10);
-        if (!currentProblem.solution) {
-            console.error("Błąd: Brak wygenerowanego problemu matematycznego.");
-            return;
-        }
-        if (answer === currentProblem.solution) {
-            points += 10;
-            logEvent("Poprawna odpowiedź! Otrzymujesz 10 punktów.");
-        } else {
-            logEvent("Niepoprawna odpowiedź.");
-        }
-        generateMathProblem();
-        updateUI();
+// Funkcja rozwiązująca zadanie matematyczne, dodająca punkty
+function solveMathProblem() {
+    const answer = parseInt(document.getElementById("answer").value, 10);
+    if (answer === currentProblem.solution) {
+        points += 10; // Dodajemy 10 punktów za poprawną odpowiedź
+        logEvent("Poprawna odpowiedź! Otrzymujesz 10 punktów.");
+    } else {
+        logEvent("Niepoprawna odpowiedź.");
     }
+    generateMathProblem();
+    updatePointsDisplay(); // Zaktualizowanie wyświetlania punktów
+}
 
     function generateMathProblem() {
         const num1 = Math.floor(Math.random() * 10) + 1;
@@ -61,16 +58,17 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function recruitUnit(type) {
-        if (points >= units[type].cost) {
-            points -= units[type].cost;
-            units[type].count++;
-            logEvent(`Rekrutowano jednostkę: ${type}.`);
-        } else {
-            logEvent(`Za mało punktów na rekrutację: ${type}.`);
-        }
-        updateUI();
+// Funkcja rekrutująca jednostki, odejmująca punkty przy zakupie
+function recruitUnit(unit) {
+    if (points >= unit.cost) {
+        points -= unit.cost; // Odejmujemy punkty przy rekrutacji
+        unit.count++;
+        logEvent(`Zrekrutowano ${unit.count} jednostek ${unit.name}`);
+    } else {
+        logEvent("Nie masz wystarczającej ilości punktów.");
     }
+    updatePointsDisplay(); // Zaktualizowanie wyświetlania punktów
+}
 
     function upgradeUnit(type) {
         if (points >= units[type].upgradeCost) {
@@ -83,6 +81,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         updateUI();
     }
+
+    // Funkcja aktualizująca wyświetlanie punktów w interfejsie
+function updatePointsDisplay() {
+    document.getElementById("points-display").textContent = `Punkty: ${points}`;
+}
 
     document.getElementById("solve")?.addEventListener("click", solveMathProblem);
     document.getElementById("recruit-warrior")?.addEventListener("click", () => recruitUnit("warrior"));
