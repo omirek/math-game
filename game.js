@@ -33,15 +33,19 @@ document.addEventListener("DOMContentLoaded", () => {
 // Funkcja rozwiązująca zadanie matematyczne, dodająca punkty
 function solveMathProblem() {
     const answer = parseInt(document.getElementById("answer").value, 10);
+
     if (answer === currentProblem.solution) {
-        points += 10; // Dodajemy 10 punktów za poprawną odpowiedź
+        points += 10;
         logEvent("Poprawna odpowiedź! Otrzymujesz 10 punktów.");
+        generateMathProblem(); // Losujemy nowy przykład tylko po poprawnej odpowiedzi
+        updatePointsDisplay();
     } else {
-        logEvent("Niepoprawna odpowiedź.");
+        logEvent("Niepoprawna odpowiedź. Spróbuj ponownie.");
     }
-    generateMathProblem();
-    updatePointsDisplay(); // Zaktualizowanie wyświetlania punktów
+
+    updateUI();
 }
+
 
     function generateMathProblem() {
         const num1 = Math.floor(Math.random() * 10) + 1;
