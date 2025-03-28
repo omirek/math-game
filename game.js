@@ -19,14 +19,16 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function updateUI() {
-        document.getElementById("wall-health").textContent = `Mury: ${wallHealth}%`;
-        document.getElementById("wall-bar-fill").style.width = `${wallHealth}%`;
-        document.getElementById("warrior-level").textContent = units.warrior.level;
-        document.getElementById("warrior-attack").textContent = units.warrior.attack;
-        document.getElementById("archer-level").textContent = units.archer.level;
-        document.getElementById("archer-attack").textContent = units.archer.attack;
-    }
+   function updateUI() {
+    document.getElementById("wall-health").textContent = `Mury: ${wallHealth}%`;
+    document.getElementById("wall-bar-fill").style.width = `${wallHealth}%`;
+    document.getElementById("warrior-level").textContent = units.warrior.level;
+    document.getElementById("warrior-attack").textContent = units.warrior.attack;
+    document.getElementById("archer-level").textContent = units.archer.level;
+    document.getElementById("archer-attack").textContent = units.archer.attack;
+    document.getElementById("points-display").textContent = `Punkty: ${points}`;
+}
+
 
     function solveMathProblem() {
         const answer = parseInt(document.getElementById("answer").value, 10);
