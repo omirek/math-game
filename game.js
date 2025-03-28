@@ -60,6 +60,7 @@ function solveMathProblem() {
 
 // Funkcja rekrutująca jednostki, odejmująca punkty przy zakupie
 function recruitUnit(unit) {
+    console.log(`Punkty: ${points}, Koszt jednostki: ${unit.cost}`); // Dodane logowanie
     if (points >= unit.cost) {
         points -= unit.cost; // Odejmujemy punkty przy rekrutacji
         unit.count++;
@@ -69,6 +70,7 @@ function recruitUnit(unit) {
     }
     updatePointsDisplay(); // Zaktualizowanie wyświetlania punktów
 }
+
 
     function upgradeUnit(type) {
         if (points >= units[type].upgradeCost) {
