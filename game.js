@@ -91,17 +91,25 @@ function enemyAttack() {
             target.health -= enemy.attack;
             logEvent(`Wróg zaatakował obrońcę! Pozostałe HP: ${target.health}`);
 
+            // Jeśli obrońca zginął
             if (target.health <= 0) {
                 units[target.type].count--;
                 logEvent(`Obrońca (${target.type}) został pokonany!`);
+                updateDefenderIcons(); // Zaktualizuj ikony obrońców
             }
 
-            updateHealthBars(); // Nowa funkcja do aktualizacji pasków zdrowia
+            // Aktualizacja paska zdrowia po ataku
+            updateHealthBars(); // Zaktualizuj paski zdrowia po każdym ataku
         } else {
+            // Jeśli nie ma obrońcy, atakujemy mury
             wallHealth -= enemy.attack;
             logEvent(`Wróg uderzył w mury! Pozostałe HP murów: ${wallHealth}`);
         }
     });
+
+    updateUI();
+}
+
 
     updateUI();
 }
@@ -173,12 +181,6 @@ function recruitUnit(unitType) {
     } else {
         logEvent("Nie masz wystarczającej ilości punktów.");
     }
-}
-
-    function updateHealthBar(unitDiv, currentHealth, maxHealth) {
-    const healthFill = unitDiv.querySelector(".health-fill");
-    const healthPercentage = (currentHealth / maxHealth) * 100;
-    healthFill.style.width = `${healthPercentage}%`;
 }
 
     function dealDamage(unitDiv, unitType, damage) {
