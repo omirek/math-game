@@ -7,6 +7,9 @@ document.addEventListener("DOMContentLoaded", () => {
 };
     let enemies = [];
     let currentProblem = {}; // Poprawiona deklaracja zmiennej
+    setTimeout(spawnEnemy, 30000 + Math.random() * 30000); // Startujemy pierwszego wroga po 30-60s
+setInterval(enemyAttack, 10000); // Wróg atakuje co 10s
+
 
     function logEvent(message) {
         const logEntries = document.getElementById("log-entries");
@@ -26,8 +29,10 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("warrior-attack").textContent = units.warrior.attack;
     document.getElementById("archer-level").textContent = units.archer.level;
     document.getElementById("archer-attack").textContent = units.archer.attack;
-    document.getElementById("points-display").textContent = `Punkty: ${points}`;
+
+    updateEnemyIcons();  // Nowa funkcja aktualizująca UI wrogów
 }
+
 
 
 // Funkcja rozwiązująca zadanie matematyczne, dodająca punkty
@@ -62,6 +67,71 @@ function solveMathProblem() {
         }
     }
 
+function spawnEnemy() {
+    const enemy = {
+        health: 20 + Math.floor(Math.random() * 10), // 20-30 HP
+        attack: 5 + Math.floor(Math.random() * 5) // 5-10 DMG
+    };
+
+    enemies.push(enemy);
+    logEvent("Pojawił się nowy wróg!");
+    updateEnemyIcons();
+
+    // Zaplanowanie kolejnego wroga
+    setTimeout(spawnEnemy, 30000 + Math.random() * 30000); // 30-60s
+}
+
+function enemyAttack() {
+    if (enemies.length === 0) return;
+
+    enemies.forEach(enemy => {
+        let target = findWeakestDefender();
+
+        if (target) {
+            target.health -= enemy.attack;
+            logEvent(`Wróg zaatakował obrońcę! Pozostałe HP: ${target.health}`);
+
+            if (target.health <= 0) {
+                units[target.type].count--;
+                logEvent(`Obrońca (${target.type}) został pokonany!`);
+                updateDefenderIcons();
+            }
+        } else {
+            wallHealth -= enemy.attack;
+            logEvent(`Wróg uderzył w mury! Pozostałe HP murów: ${wallHealth}`);
+        }
+    });
+
+    updateUI();
+}
+
+function findWeakestDefender() {
+    let weakest = null;
+
+    Object.keys(units).forEach(type => {
+        if (units[type].count > 0) {
+            let defender = { type, health: units[type].health };
+            if (!weakest || defender.health < weakest.health) {
+                weakest = defender;
+            }
+        }
+    });
+
+    return weakest;
+}
+
+function updateEnemyIcons() {
+    const enemyIcons = document.getElementById("enemy-icons");
+    enemyIcons.innerHTML = '';
+
+    enemies.forEach(() => {
+        const enemyIcon = document.createElement("div");
+        enemyIcon.classList.add("enemy-icon");
+        enemyIcons.appendChild(enemyIcon);
+    });
+}
+
+    
 function recruitUnit(unitType) {
     const unit = units[unitType];
     
