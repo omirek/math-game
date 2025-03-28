@@ -59,17 +59,38 @@ function solveMathProblem() {
     }
 
 function recruitUnit(unitType) {
-    const unit = units[unitType]; // Pobieramy jednostkę na podstawie typu (np. "warrior", "archer")
+    const unit = units[unitType];
     
     if (points >= unit.cost) {
         points -= unit.cost;
-        unit.count++; // Zwiększamy liczbę jednostek
+        unit.count++;
         logEvent(`Zrekrutowano jednostkę: ${unitType}.`);
         logEvent(`Pozostałe punkty: ${points}`);
+        updateDefenderIcons();  // Aktualizujemy ikony obrońców
         updateUI();
         updatePointsDisplay();
     } else {
         logEvent("Nie masz wystarczającej ilości punktów.");
+    }
+}
+
+
+    function updateDefenderIcons() {
+    const defenderIcons = document.getElementById("defender-icons");
+    defenderIcons.innerHTML = '';  // Czyścimy poprzednią zawartość
+
+    // Dodajemy ikony dla wojowników
+    for (let i = 0; i < units.warrior.count; i++) {
+        const warriorIcon = document.createElement("div");
+        warriorIcon.classList.add("defender-icon", "warrior");
+        defenderIcons.appendChild(warriorIcon);
+    }
+
+    // Dodajemy ikony dla łuczników
+    for (let i = 0; i < units.archer.count; i++) {
+        const archerIcon = document.createElement("div");
+        archerIcon.classList.add("defender-icon", "archer");
+        defenderIcons.appendChild(archerIcon);
     }
 }
 
