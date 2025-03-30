@@ -42,14 +42,23 @@ function solveMathProblem() {
     if (answer === currentProblem.solution) {
         points += 10;
         logEvent("Poprawna odpowiedź! Otrzymujesz 10 punktów.");
+        playSound("correct-answer-sound.mp3");
         generateMathProblem(); // Losujemy nowy przykład tylko po poprawnej odpowiedzi
         updatePointsDisplay();
     } else {
         logEvent("Niepoprawna odpowiedź. Spróbuj ponownie.");
+        playSound("wrong-answer-sound.mp3");
     }
 
     updateUI();
 }
+
+
+function playSound(filename) {
+    const audio = new Audio(filename);
+    audio.play();
+}
+
 
 
     function generateMathProblem() {
