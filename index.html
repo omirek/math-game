@@ -7,7 +7,36 @@
     body { margin: 0; overflow: hidden; font-family: sans-serif; }
     canvas { background: #f0f0f0; display: block; margin: 0 auto; border: 1px solid #ccc; }
     #controls { text-align: center; margin: 10px; }
-    button { margin: 0 5px; padding: 8px 15px; cursor: pointer; }
+     #controls button { /* Target buttons specifically within the controls div */
+        margin: 0 5px;
+        padding: 8px 15px; /* Add padding: 8px top/bottom, 15px left/right */
+        cursor: pointer; /* Ensure cursor indicates clickability */
+        font-size: 14px; /* Optional: Adjust font size if needed */
+        border: 1px solid #aaa; /* Optional: Add a subtle border */
+        border-radius: 4px; /* Optional: Slightly rounded corners */
+        background-color: #e7e7e7; /* Optional: Default background */
+    }
+    /* Style the upgrade button slightly differently if desired */
+    #upgradeCapButton {
+        background-color: #d4af37; /* Keep its gold color */
+        color: black;
+        border-color: #b89b32; /* Darker gold border */
+    }
+    /* Optional: Add hover/active states for better feedback */
+    #controls button:hover {
+        background-color: #dcdcdc;
+    }
+    #upgradeCapButton:hover {
+         background-color: #c8a432;
+    }
+     #controls button:active {
+         background-color: #c0c0c0;
+         transform: translateY(1px); /* Slight press effect */
+     }
+     #upgradeCapButton:active {
+         background-color: #b89b32;
+         transform: translateY(1px);
+     }
     #scoreDisplay { text-align: center; margin: 10px; font-size: 16px; }
     #mathProblem { text-align: center; margin: 10px; font-size: 18px; }
     #gameOverScreen {
@@ -33,9 +62,15 @@
     <button onclick="spawnUnit('melee')">Spawn [M]elee (Cost: 10)</button>
     <button onclick="spawnUnit('archer')">Spawn [A]rcher (Cost: 15)</button>
     <button onclick="spawnUnit('mage')">Spawn Ma[G]e (Cost: 50)</button>
+    <button id="upgradeCapButton" onclick="upgradeArmyCap()" style="margin-left: 20px; background-color: #d4af37; color: black;">
+      [U]pgrade Cap (15 -> 20) (Cost: 75)
+    </button>
   </div>
   <div id="scoreDisplay">🪙 Gold: <span id="score">0</span>     📈 Score: <span id="mathScore">0</span></div>
 	 <div id="waveStatus" style="text-align: center; margin: 5px; font-size: 18px; font-weight: bold; color: #333;">Game Starting...</div>
+       <div id="armyCountDisplay" style="text-align: center; margin: 5px; font-size: 16px; color: #555;">
+    Units: 0 / 15
+  </div>
   <div id="mathProblem"></div>
   <canvas id="gameCanvas" width="800" height="500"></canvas>
   <div id="gameOverScreen">Game Over!<br/><span>Final Score: 0</span></div>
@@ -49,6 +84,14 @@
     const FLASH_DURATION = 10; // Duration of damage flash effect in frames
     const WAVE_CLEAR_BASE_GOLD = 25;    // Base gold reward for clearing a wave
     const WAVE_CLEAR_GOLD_PER_WAVE = 5; // Additional gold per wave number
+    
+    const BASE_ARMY_CAP = 10;                  // Starting maximum number of player units
+    const ARMY_CAP_INCREASE_PER_UPGRADE = 5;   // How many slots each upgrade adds
+    const BASE_ARMY_CAP_UPGRADE_COST = 75;     // Cost of the *first* upgrade
+    const ARMY_CAP_UPGRADE_COST_SCALING = 1.8; // Cost multiplier for subsequent upgrades (e.g., 1.8x)
+
+    let currentArmyCap = BASE_ARMY_CAP;         // Player's current cap
+    let armyCapUpgradeLevel = 0;                // How many times the cap has been upgraded
 
     const units = [];
     const enemies = [];
@@ -84,6 +127,24 @@
       maxHp: 1000,
       hp: 1000
     };
+
+	    // --- START ADDITION: Army Count Display Function ---
+    function updateArmyCountDisplay() {
+        const displayElement = document.getElementById('armyCountDisplay');
+        if (displayElement) {
+            displayElement.innerText = `Units: ${units.length} / ${currentArmyCap}`;
+
+            // Optional: Change color if at cap
+            if (units.length >= currentArmyCap) {
+                displayElement.style.color = 'darkred'; // Indicate cap reached
+                displayElement.style.fontWeight = 'bold';
+            } else {
+                displayElement.style.color = '#555'; // Default color
+                displayElement.style.fontWeight = 'normal';
+            }
+        }
+    }
+    // --- END ADDITION ---
 
    function updateScoreDisplay() {
      document.getElementById('score').innerText = score;
@@ -239,7 +300,7 @@
             this.color = 'blue';
             this.speed = 1.5;
             this.range = 30; // Melee range
-            this.attackDamage = 1.5;
+            this.attackDamage = 1;
             this.attackCooldown = 30; // frames (0.5s at 60fps)
             break;
           case 'archer':
@@ -260,7 +321,7 @@
             this.color = 'darkred';
             this.speed = 1.0 + Math.random() * 0.4; // Slight speed variation
             this.range = 30; // Enemy melee range
-            this.attackDamage = 1.5;
+            this.attackDamage = 2;
              this.attackCooldown = 30;
             this.castleDamage = 0.2; // Damage per frame to castle
             break;
@@ -758,13 +819,22 @@
 
     function spawnUnit(type) {
       if (!gameRunning) return;
+       // Only check cap for player units (not 'enemy')
+      if (type !== 'enemy') {
+          if (units.length >= currentArmyCap) {
+              console.log(`Army cap reached (${currentArmyCap}). Cannot spawn ${type}.`);
+              // Optional: Add visual feedback - flash the cap button red?
+              flashElement(document.getElementById('upgradeCapButton'), 'lightcoral');
+              return; // Stop spawning if cap is reached
+          }
+      }
       const costs = { melee: 10, archer: 15, mage: 50 };
       const cost = costs[type] || 0; // Default cost 0 if type not found
 
       if (type !== 'enemy') { // Player unit spawn
           if (score < cost) {
-              // console.log(`Not enough gold to spawn ${type}. Need ${cost}, have ${score}`);
-              // Optional: Add visual feedback (e.g., disable button or flash score red)
+              console.log(`Not enough gold to spawn ${type}. Need ${cost}, have ${score}`);
+               flashElement(getSpawnButtonByType(type), 'lightcoral'); // Helper needed
               return;
           }
           score -= cost;
@@ -801,6 +871,73 @@
       }
     }
 
+
+	 function getSpawnButtonByType(type) {
+        const buttons = document.querySelectorAll('#controls button');
+        if (type === 'melee') return buttons[0];
+        if (type === 'archer') return buttons[1];
+        if (type === 'mage') return buttons[2];
+        return null;
+    }
+
+    // General purpose element flasher
+    function flashElement(element, flashColor = 'lightcoral', originalColor = null, duration = 200) {
+       if (element) {
+            const originalBg = originalColor !== null ? originalColor : element.style.backgroundColor;
+            element.style.transition = 'background-color 0.1s ease-in-out'; // Ensure transition is set
+            element.style.backgroundColor = flashColor;
+            setTimeout(() => {
+                 // Check element still exists before reverting
+                 if(document.body.contains(element)) {
+                     element.style.backgroundColor = originalBg;
+                 }
+            }, duration);
+        }
+    }
+    
+     function calculateNextCapUpgradeCost() {
+        // Cost increases exponentially based on the number of upgrades already purchased
+        const cost = BASE_ARMY_CAP_UPGRADE_COST * Math.pow(ARMY_CAP_UPGRADE_COST_SCALING, armyCapUpgradeLevel);
+        return Math.floor(cost); // Use floor to keep costs as integers
+    }
+
+    function updateUpgradeButtonDisplay() {
+        const button = document.getElementById('upgradeCapButton');
+        if (!button) return;
+
+        const nextCost = calculateNextCapUpgradeCost();
+        const nextCap = currentArmyCap + ARMY_CAP_INCREASE_PER_UPGRADE;
+
+        button.innerHTML = `[U]pgrade Cap (${currentArmyCap} -> ${nextCap}) (Cost: ${nextCost}🪙)`;
+    }
+
+    function upgradeArmyCap() {
+        if (!gameRunning) return;
+
+        const cost = calculateNextCapUpgradeCost();
+
+        if (score >= cost) {
+            // Affordable: Perform upgrade
+            score -= cost;
+            currentArmyCap += ARMY_CAP_INCREASE_PER_UPGRADE;
+            armyCapUpgradeLevel++; // Increment the level tracker
+
+            console.log(`Army cap upgraded to ${currentArmyCap}. Level: ${armyCapUpgradeLevel}`);
+
+            updateScoreDisplay(); // Update score shown
+            updateUpgradeButtonDisplay(); // Update button text for the *next* upgrade
+
+            // Optional: Flash button green on success
+             flashElement(document.getElementById('upgradeCapButton'), 'lightgreen', '#d4af37'); // Flash green, revert to gold
+
+        } else {
+            // Unaffordable
+            console.log(`Not enough gold to upgrade army cap. Need ${cost}, have ${score}`);
+            // Optional: Flash button red on failure
+            flashElement(document.getElementById('upgradeCapButton'), 'lightcoral', '#d4af37'); // Flash red, revert to gold
+        }
+    }
+    
      function updateWaveStatusDisplay(message) {
         const statusElement = document.getElementById('waveStatus');
         if (statusElement) {
@@ -930,6 +1067,10 @@
             flashButton('mage');
             shortcutUsed = true;
             break;
+        case 'u': // U key for Upgrade Cap
+            upgradeArmyCap(); // Call the upgrade function
+            shortcutUsed = true;
+            break;
     }
 
     // If a shortcut key (M, A, G) was just processed, prevent its default action.
@@ -974,6 +1115,7 @@
       // Draw background elements
       drawCastle();
 		 updateWaveLogic(); // Handle wave progression and enemy spawning
+         updateArmyCountDisplay(); // Update the display every frame
       // Update and Draw Units (player and enemy)
       [...units, ...enemies].forEach(u => {
         if (u.update) u.update(); // Make sure update exists before calling
@@ -1031,6 +1173,9 @@ if (answerInput) { // Make sure the element exists before adding listener
 } else {
     console.error("Could not find answerInput to attach input listener!");
 }
+
+updateUpgradeButtonDisplay();
+updateArmyCountDisplay(); // Set initial army count display
 
   </script>
 </body>
