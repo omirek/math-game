@@ -1,72 +1,1037 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Obrona Miasta - v1.5</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>Archer Avoidance Simulation</title>
+  <style>
+    body { margin: 0; overflow: hidden; font-family: sans-serif; }
+    canvas { background: #f0f0f0; display: block; margin: 0 auto; border: 1px solid #ccc; }
+    #controls { text-align: center; margin: 10px; }
+    button { margin: 0 5px; padding: 8px 15px; cursor: pointer; }
+    #scoreDisplay { text-align: center; margin: 10px; font-size: 16px; }
+    #mathProblem { text-align: center; margin: 10px; font-size: 18px; }
+    #gameOverScreen {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      font-size: 32px;
+      text-align: center;
+      padding-top: 200px;
+      z-index: 10;
+      cursor: pointer; /* Allow clicking to maybe restart later */
+    }
+    #gameOverScreen span { font-size: 24px; display: block; margin-top: 20px; }
+  </style>
 </head>
 <body>
-    <header>
-        <h1>Obrona Miasta - v1.561</h1>
-    </header>
-    
-    <main>
-        <!-- Panel rekrutacji jednostek -->
-        <section id="recruitment-panel">
-            <h2>Rekrutacja</h2>
-            <div id="points-display">Punkty: 100</div>
-            <div class="unit" id="warrior">
-                <span>Wojownik (Poziom <span id="warrior-level">1</span>)</span>
-                <span>Atak: <span id="warrior-attack">5</span></span>
-                <button id="recruit-warrior">Kup (15 pkt)</button>
-                <button id="upgrade-warrior">Ulepsz (20 pkt)</button>
-            </div>
-            <div class="unit" id="archer">
-                <span>Łucznik (Poziom <span id="archer-level">1</span>)</span>
-                <span>Atak: <span id="archer-attack">8</span></span>
-                <button id="recruit-archer">Kup (20 pkt)</button>
-                <button id="upgrade-archer">Ulepsz (30 pkt)</button>
-            </div>
-        </section>
-        
-        <!-- Obszar gry -->
-        <section id="game-area">
-            <!-- Panel matematyczny -->
-            <div id="math-problem">
-                <p id="problem">?</p>
-                <input type="number" id="answer" placeholder="Twoja odpowiedź">
-                <button id="solve">Sprawdź</button>
-            </div>
-            
-         <!-- Wizualizacja bitwy -->
-<div id="battlefield">
-    <div id="wall-container">
-        <div id="wall-health">Mury: 100%</div>
-        <div id="wall-bar"><div id="wall-bar-fill"></div></div>
-    </div>
-    <div id="battlefield-field">
-        <div id="defenders">
-            <h3>Obrońcy</h3>
-            <div id="defender-icons"></div>
-        </div>
-        <div id="enemies">
-            <h3>Wrogowie</h3>
-            <div id="enemy-icons"></div>
-        </div>
-    </div>
-</div>
+  <div id="controls">
+    <button onclick="spawnUnit('melee')">Spawn [M]elee (Cost: 10)</button>
+    <button onclick="spawnUnit('archer')">Spawn [A]rcher (Cost: 15)</button>
+    <button onclick="spawnUnit('mage')">Spawn Ma[G]e (Cost: 50)</button>
+  </div>
+  <div id="scoreDisplay">🪙 Gold: <span id="score">0</span>     📈 Score: <span id="mathScore">0</span></div>
+	 <div id="waveStatus" style="text-align: center; margin: 5px; font-size: 18px; font-weight: bold; color: #333;">Game Starting...</div>
+  <div id="mathProblem"></div>
+  <canvas id="gameCanvas" width="800" height="500"></canvas>
+  <div id="gameOverScreen">Game Over!<br/><span>Final Score: 0</span></div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const SAFE_MARGIN = 40; // Keep units away from edges initially
+    const SEPARATION_DISTANCE = 25; // Min distance units try to maintain
+    const SEPARATION_STRENGTH = 0.5; // How strongly they push apart
+    const FLASH_DURATION = 10; // Duration of damage flash effect in frames
+    const WAVE_CLEAR_BASE_GOLD = 25;    // Base gold reward for clearing a wave
+    const WAVE_CLEAR_GOLD_PER_WAVE = 5; // Additional gold per wave number
+
+    const units = [];
+    const enemies = [];
+    const projectiles = [];
+    let score = 50; // Starting gold
+    let mathScore = 0;
+    let currentAnswer = 0;
+    let currentOperands = [0, 0];
+    let currentOperator = '+';
+    let gameRunning = true; // Flag to stop updates when game over
+    let currentWave = 0;
+    let waveState = 'INTERMISSION'; // Possible states: 'INTERMISSION', 'SPAWNING'
+    let waveTimer = 0; // General timer for current phase (frames)
+    let spawnTimer = 0; // Timer between spawns within a wave (frames)
+
+    let enemiesToSpawnThisWave = 0;
+    let enemiesSpawnedThisWave = 0;
+    let waveSpawnInterval = 0; // Frames between spawns for the current wave
+
+    const BASE_INTERMISSION_DURATION = 25 * 60; // 15 seconds in frames (assuming 60fps)
+    const INITIAL_INTERMISSION_DURATION = 8 * 60; // Shorter pause before Wave 1
+    const BASE_ENEMY_COUNT = 5;
+    const ENEMY_COUNT_INCREASE_PER_WAVE = 2;
+    const BASE_SPAWN_INTERVAL = 150; // Frames (2 seconds)
+    const SPAWN_INTERVAL_DECREASE_PER_WAVE = 1; // Frames
+    const MIN_SPAWN_INTERVAL = 45; // Minimum frames (0.5 seconds)
+
+    const castle = {
+      x: canvas.width / 2,
+      y: canvas.height - 60, // Center Y of the castle structure base
+      width: 120,
+      height: 100,
+      maxHp: 1000,
+      hp: 1000
+    };
+
+   function updateScoreDisplay() {
+     document.getElementById('score').innerText = score;
+     document.getElementById('mathScore').innerText = mathScore;
+   }
 
 
-        </section>
-        
-        <!-- Dziennik zdarzeń -->
-        <section id="event-log">
-            <h2>Dziennik</h2>
-            <div id="log-entries"></div>
-        </section>
-    </main>
+    function drawCastle() {
+      const { x, y, width, height, hp, maxHp } = castle;
+      const left = x - width / 2;
+      const top = y - height / 2;
+
+      // Draw structure
+      ctx.fillStyle = '#5a4d41'; // Brownish color
+      ctx.fillRect(left, top, width, height); // Main block
+
+      ctx.fillStyle = '#8b7e75'; // Lighter stone color for details
+      // Draw towers (simplified)
+      const towerWidth = width * 0.2;
+      const towerHeight = height * 1.2;
+      ctx.fillRect(left - towerWidth * 0.1, top - (towerHeight-height), towerWidth, towerHeight); // Left tower
+      ctx.fillRect(left + width - towerWidth*0.9, top - (towerHeight-height), towerWidth, towerHeight); // Right tower
+
+      // Draw battlements (simplified crenellations)
+      const battlementHeight = 15;
+      const battlementWidth = 15;
+      const numBattlements = Math.floor(width / (battlementWidth * 1.5));
+      ctx.fillStyle = '#5a4d41';
+      for(let i=0; i < numBattlements; i++) {
+          ctx.fillRect(left + i * (battlementWidth * 1.5) + battlementWidth*0.25, top - battlementHeight, battlementWidth, battlementHeight);
+      }
+
+      // Health bar (above castle)
+      const healthRatio = Math.max(0, hp / maxHp); // Ensure ratio doesn't go below 0
+      const barWidth = 100;
+      const barHeight = 10;
+      const barX = x - barWidth / 2;
+      const barY = top - 30; // Position the health bar above the castle
+
+      ctx.save();
+      ctx.fillStyle = '#333'; // Background of bar
+      ctx.fillRect(barX, barY, barWidth, barHeight);
+      ctx.fillStyle = healthRatio > 0.5 ? 'lime' : healthRatio > 0.2 ? 'yellow' : 'red'; // Color changes with health
+      ctx.fillRect(barX, barY, barWidth * healthRatio, barHeight);
+      ctx.strokeStyle = '#222'; // Border for clarity
+      ctx.strokeRect(barX, barY, barWidth, barHeight);
+      ctx.restore();
+    }
+
+
+    function askMathProblem() {
+      let a = Math.floor(Math.random() * 10) + 1;
+      let b = Math.floor(Math.random() * 10) + 1;
+      const ops = ['+', '-', '*'];
+      const op = ops[Math.floor(Math.random() * ops.length)];
+
+      if (op === '-' && a < b) [a, b] = [b, a]; // Ensure subtraction results >= 0 for simplicity
+      if (op === '/' ) { // Avoid division for now, or implement carefully
+           // Make sure b divides a, or regenerate
+           b = Math.floor(Math.random() * 5) + 1; // Smaller divisor
+           a = b * (Math.floor(Math.random() * 5) + 1);
+      }
+
+      currentOperands = [a, b];
+      currentOperator = op;
+
+            const isHard =
+           // Multiplication is hard ONLY IF:
+           (op === '*' &&         // It's multiplication AND
+            (a > 5 || b > 5) &&   // at least one number is > 5 AND
+            a !== 1 && b !== 1 && // neither number is 1 AND
+            a !== 10 && b !== 10  // neither number is 10
+           ) ||
+           // Addition is hard IF:
+           (op === '+' && a + b > 15) ||
+           // Subtraction is hard IF:
+           (op === '-' && a > 15); // (Keep original logic for + and -)
+      const problemStr = `${a} ${op} ${b}`;
+      currentAnswer = eval(problemStr); // Be careful with eval in real apps, but okay for this simple case
+
+      const container = document.getElementById('mathProblem');
+      container.innerHTML = `<form id="mathForm">
+        <span>${problemStr} = ?</span>
+        ${isHard ? '<span style="color:gold; font-weight:bold; margin-left: 10px;">💰 Bonus!</span>' : ''}
+        <input type="number" id="answerInput" required style="margin-left: 10px; width: 50px;">
+        <button type="submit">Submit</button>
+      </form>`;
+
+      document.getElementById('mathForm').addEventListener('submit', submitAnswer);
+      // Auto-focus after a tiny delay to ensure element exists
+      setTimeout(() => {
+        const input = document.getElementById('answerInput');
+        if (input) input.focus();
+       }, 50);
+    }
+
+
+    function submitAnswer(event) {
+      if (event) event.preventDefault(); // Prevent form reload
+      if (!gameRunning) return; // Don't process answers if game over
+
+      const input = document.getElementById('answerInput');
+      const value = parseInt(input.value, 10);
+
+      if (!isNaN(value) && value === currentAnswer) {
+        // Correct answer
+        let baseGold = 5;
+        let operatorBonus = 0;
+        if (currentOperator === '*') operatorBonus = 10;
+        else if (currentOperator === '-') operatorBonus = 2;
+
+        let operandBonus = 0;
+        if (currentOperands[0] > 8 || currentOperands[1] > 8) operandBonus += 3;
+        if (currentOperands[0] + currentOperands[1] > 15) operandBonus += 3;
+
+        let totalGold = baseGold + operatorBonus + operandBonus;
+
+        score += totalGold;
+        mathScore += totalGold; // Use the same value for simplicity, or calculate differently
+
+        updateScoreDisplay();
+        // Optional: Visual feedback for correct answer
+        document.getElementById('mathProblem').style.backgroundColor = 'lightgreen';
+        setTimeout(() => { document.getElementById('mathProblem').style.backgroundColor = ''; }, 200);
+
+      } else {
+         // Optional: Visual feedback for incorrect answer
+        document.getElementById('mathProblem').style.backgroundColor = 'lightcoral';
+        setTimeout(() => { document.getElementById('mathProblem').style.backgroundColor = ''; }, 200);
+      }
+
+      // Ask new question regardless of correctness
+      input.value = ""; // Clear input
+      askMathProblem();
+    }
+
+    // --- Unit Classes ---
+
+    class Unit {
+      constructor(x, y, type) {
+        this.x = x;
+        this.y = y;
+        this.type = type; // 'melee', 'archer', 'mage', 'enemy'
+        this.radius = (type === 'enemy' ? 12 : 10); // Enemy slightly bigger?
+        this.maxHp = (type === 'enemy' ? 80 : 100); // Enemies maybe slightly weaker?
+        this.hp = this.maxHp;
+        this.target = null;
+        this.cooldown = 0; // For attacks/abilities
+
+        // Type-specific properties
+        switch (type) {
+          case 'melee':
+            this.color = 'blue';
+            this.speed = 1.5;
+            this.range = 30; // Melee range
+            this.attackDamage = 1.5;
+            this.attackCooldown = 30; // frames (0.5s at 60fps)
+            break;
+          case 'archer':
+            this.color = 'purple';
+            this.speed = 1.3;
+            this.range = 150;
+            this.projectileDamage = 3;
+            this.attackCooldown = 60; // frames (1s at 60fps)
+            break;
+          case 'mage': // Base properties if Mage isn't used, overridden by Mage class
+            this.color = 'cyan';
+            this.speed = 1.2;
+            this.range = 100;
+            this.attackDamage = 0; // Mages don't attack directly in this setup
+            this.attackCooldown = 1000; // Effectively no attack
+            break;
+          case 'enemy':
+            this.color = 'darkred';
+            this.speed = 1.0 + Math.random() * 0.4; // Slight speed variation
+            this.range = 30; // Enemy melee range
+            this.attackDamage = 1.5;
+             this.attackCooldown = 30;
+            this.castleDamage = 0.2; // Damage per frame to castle
+            break;
+          default:
+             this.color = 'grey';
+             this.speed = 1;
+             this.range = 10;
+             this.attackDamage = 0.5;
+             this.attackCooldown = 60;
+        }
+      }
+
+      draw() {
+        // Body
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        ctx.strokeStyle = 'black'; // Outline
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Health bar
+        const barWidth = this.radius * 2.5;
+        const barHeight = 4;
+        const barX = this.x - barWidth / 2;
+        const barY = this.y - this.radius - 8; // Position above unit
+        const healthRatio = Math.max(0, this.hp / this.maxHp);
+
+        ctx.fillStyle = '#333';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+        ctx.fillStyle = healthRatio > 0.5 ? 'lime' : healthRatio > 0.2 ? 'yellow' : 'red';
+        ctx.fillRect(barX, barY, barWidth * healthRatio, barHeight);
+      }
+
+      update() {
+        if (this.hp <= 0) {
+            this.remove();
+            return; // Stop update if removed
+        }
+        if (this.cooldown > 0) this.cooldown--;
+
+        let targetDX = 0, targetDY = 0; // Desired movement based on target/fleeing/goal
+        let separationDX = 0, separationDY = 0; // Desired movement based on separation
+
+        // --- Find Target (if needed) ---
+        if (this.type === 'enemy') {
+             // Enemies prioritize player units, then castle
+             this.target = this.findNearest(units);
+        } else if (this.type !== 'mage') { // Melee, Archer find enemy targets
+             this.target = this.findNearest(enemies);
+        } else { // Mage finds enemy targets for bouncing, but primarily focuses on healing allies
+             this.target = this.findNearest(enemies); // Keep track for bounce trigger
+        }
+
+        // --- Calculate Target/Goal Movement Direction ---
+        if (this.type === 'enemy') {
+            const castleDist = this.distanceTo(castle);
+            if (this.target) {
+                // Move towards or attack unit target
+                const dist = this.distanceTo(this.target);
+                if (dist <= this.range) {
+                    this.attack(this.target); // Attack unit
+                } else {
+                    const dx = this.target.x - this.x;
+                    const dy = this.target.y - this.y;
+                    const targetDist = Math.hypot(dx, dy);
+                    if (targetDist > 0) {
+                        targetDX = (dx / targetDist);
+                        targetDY = (dy / targetDist);
+                    }
+                }
+            } else if (castleDist <= this.range + castle.width / 2) {
+                // Attack castle if in range and no unit target
+                 if (castle.hp > 0) {
+                      castle.hp -= this.castleDamage;
+                      if (castle.hp <= 0) {
+                         gameOver();
+                         return; // Stop update if game over
+                      }
+                 }
+            } else {
+                 // Move towards castle if no unit target and not in range
+                const dx = castle.x - this.x;
+                // Aim slightly higher than castle base to avoid getting stuck under
+                const dy = (castle.y - castle.height / 2 + this.radius) - this.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist > 0) {
+                    targetDX = (dx / dist);
+                    targetDY = (dy / dist);
+                }
+            }
+        } else { // Player units (melee, archer, mage)
+             if (this.target && (this.type === 'melee' || this.type === 'archer')) {
+                 const dist = this.distanceTo(this.target);
+
+                 if (this.type === 'archer') {
+                     const idealDist = this.range * 0.8; // Try to stay at 80% of max range
+                     if (dist < idealDist) { // Flee if too close
+                         const dx = this.x - this.target.x;
+                         const dy = this.y - this.target.y;
+                         const fleeDist = Math.hypot(dx, dy);
+                         if (fleeDist > 0) {
+                             targetDX = (dx / fleeDist);
+                             targetDY = (dy / fleeDist);
+                         }
+                         if (dist <= this.range) this.shoot(this.target); // Shoot even if fleeing
+                     } else if (dist <= this.range) { // Shoot if in range but not too close
+                         this.shoot(this.target);
+                         // Stay put while shooting (targetDX/DY remain 0)
+                     } else { // Move towards if too far
+                         const dx = this.target.x - this.x;
+                         const dy = this.target.y - this.y;
+                         const targetDist = Math.hypot(dx, dy);
+                         if (targetDist > 0) {
+                             targetDX = (dx / targetDist);
+                             targetDY = (dy / targetDist);
+                         }
+                     }
+                 } else if (this.type === 'melee') {
+                     if (dist <= this.range) {
+                         this.attack(this.target);
+                         // Stay put while attacking
+                     } else { // Move towards target
+                         const dx = this.target.x - this.x;
+                         const dy = this.target.y - this.y;
+                         const targetDist = Math.hypot(dx, dy);
+                         if (targetDist > 0) {
+                             targetDX = (dx / targetDist);
+                             targetDY = (dy / targetDist);
+                         }
+                     }
+                 }
+             } else if (this.type === 'mage') {
+                 // Mage specific logic is handled by its own methods called here
+                 this.updateMageSpecifics(); // Heal, check bounce trigger
+                 // Get mage's desired movement (towards damaged allies if no enemies nearby)
+                 const moveGoal = this.findHealingTargetMovement();
+                 if (moveGoal) {
+                     targetDX = moveGoal.dx;
+                     targetDY = moveGoal.dy;
+                 }
+                 // Note: Mage doesn't directly attack, but might trigger bounce which needs enemy target info.
+             }
+             // If no target, player units currently stand still (unless mage moves to heal)
+        }
+
+        // --- Calculate Separation Force ---
+        // Consider both allies and enemies for separation
+        const nearbyUnits = (this.type === 'enemy' ? [...units, ...enemies] : [...units, ...enemies]);
+        for (const other of nearbyUnits) {
+          if (other === this || other.hp <= 0) continue; // Don't separate from self or dead units
+
+          const dist = this.distanceTo(other);
+
+          if (dist > 0 && dist < SEPARATION_DISTANCE) {
+            const pushX = this.x - other.x;
+            const pushY = this.y - other.y;
+            // No need for hypot again, dist is the magnitude
+            // Apply stronger force when closer
+            const strength = SEPARATION_STRENGTH * (1 - dist / SEPARATION_DISTANCE);
+            separationDX += (pushX / dist) * strength;
+            separationDY += (pushY / dist) * strength;
+          }
+        }
+
+        // --- Combine Movement Vectors ---
+        // Simple addition works, could prioritize target movement later if needed
+        let finalDX = targetDX + separationDX;
+        let finalDY = targetDY + separationDY;
+
+        // --- Apply Final Movement ---
+        const finalDist = Math.hypot(finalDX, finalDY);
+        if (finalDist > 0) {
+          // Normalize the final vector and multiply by speed
+          // Cap the influence of separation so units don't zip away too fast
+          const moveX = (finalDX / finalDist) * this.speed;
+          const moveY = (finalDY / finalDist) * this.speed;
+          this.x += moveX;
+          this.y += moveY;
+        }
+
+        // --- Post-Movement Actions ---
+        this.enforceBounds();
+      } // End of update()
+
+
+      findNearest(targets) {
+        let minDist = Infinity;
+        let nearest = null;
+        for (const t of targets) {
+            if (t.hp <= 0) continue; // Ignore dead targets
+            const d = this.distanceTo(t);
+            if (d < minDist) {
+                minDist = d;
+                nearest = t;
+            }
+        }
+        return nearest;
+      }
+
+      distanceTo(other) {
+          let otherX, otherY;
+          if (other === castle) {
+              // Find closest point on castle rectangle to the unit's center
+              const left = castle.x - castle.width / 2;
+              const right = castle.x + castle.width / 2;
+              const top = castle.y - castle.height / 2;
+              const bottom = castle.y + castle.height / 2;
+              otherX = Math.max(left, Math.min(this.x, right));
+              otherY = Math.max(top, Math.min(this.y, bottom));
+          } else {
+               if (!other || typeof other.x === 'undefined' || typeof other.y === 'undefined') {
+                   // console.warn("Invalid target in distanceTo:", other);
+                   return Infinity; // Avoid errors with invalid targets
+               }
+              otherX = other.x;
+              otherY = other.y;
+          }
+          const dx = this.x - otherX;
+          const dy = this.y - otherY;
+          return Math.hypot(dx, dy);
+      }
+
+      attack(target) {
+        if (this.cooldown <= 0 && target && target.hp > 0) {
+          target.hp -= this.attackDamage;
+          this.cooldown = this.attackCooldown;
+           if (target.hp <= 0) {
+               this.target = null; // Target died, find new one next frame
+           }
+        }
+      }
+
+      shoot(target) {
+        if (this.cooldown <= 0 && target && target.hp > 0) {
+          projectiles.push(new Projectile(this.x, this.y, target, this.projectileDamage, this)); // Pass damage and owner
+          this.cooldown = this.attackCooldown;
+        }
+      }
+
+      enforceBounds() {
+        // Keep units fully within the canvas, respecting SAFE_MARGIN
+        // Use SAFE_MARGIN directly as the minimum boundary
+        const minX = SAFE_MARGIN;
+        const minY = SAFE_MARGIN;
+        const maxX = canvas.width - SAFE_MARGIN;
+        const maxY = canvas.height - SAFE_MARGIN;
+
+        // Clamp the unit's CENTER position
+        this.x = Math.max(minX, Math.min(this.x, maxX));
+        this.y = Math.max(minY, Math.min(this.y, maxY));
+
+        // Note: If a unit is pushed exactly to the margin, its edge
+        // might still slightly overlap if radius > SAFE_MARGIN, but
+        // its center will be kept within the safe zone.
+        // For health bars always visible, ensure SAFE_MARGIN is large enough
+        // (e.g., > unit radius + health bar height + buffer).
+        // Current SAFE_MARGIN = 40 should be sufficient.
+      }
+
+      remove() {
+        const list = (this.type === 'enemy' ? enemies : units);
+        const idx = list.indexOf(this);
+        if (idx !== -1) list.splice(idx, 1);
+      }
+
+      // Placeholder methods for Mage - will be overridden but prevent errors if called on base Unit
+      updateMageSpecifics() { }
+      findHealingTargetMovement() { return null; }
+
+    } // End of Unit class
+
+    // --- Mage Class ---
+    class Mage extends Unit {
+      constructor(x, y) {
+        super(x, y, 'mage'); // Call base class constructor
+        // Override or set Mage-specific properties
+        this.color = '#2ecc71'; // Emerald green
+        this.speed = 1.1;
+        this.range = 120; // Range for abilities, not direct attack
+        this.maxHp = 50; // Mages might be slightly squishier
+        this.hp = this.maxHp;
+
+        this.healRate = 0.04; // HP per frame
+        this.healRange = 40;
+        this.bounceCooldownMax = 360; // 3 seconds at 60fps
+        this.bounceCooldown = 0;
+        this.bounceTriggerRange = 70; // Enemies within this range can trigger the bounce
+        this.bounceEffectRange = 200; // Enemies within this range are affected when bounce triggers
+        this.bounceForce = 150; // How far enemies are pushed
+      }
+
+      // Called BY the base Unit.update() method specifically for mages
+      updateMageSpecifics() {
+          this.healNearbyUnits();
+
+          if (this.bounceCooldown <= 0) {
+              this.triggerBounceOff();
+          } else {
+              this.bounceCooldown--;
+          }
+      }
+
+            // Provides movement direction towards the "best" target needing healing.
+        // Best is determined by a score combining missing health and proximity.
+        findHealingTargetMovement() {
+            let bestTargetOverall = null;
+            let highestScoreOverall = -1;
+
+            // Find the allied unit (not self) with the highest score globally
+            for (const unit of units) {
+                // Skip self & units at full health
+                if (unit === this || unit.hp >= unit.maxHp) continue;
+
+                const dist = this.distanceTo(unit);
+                // Add small amount to distance to prevent division by zero
+                const distanceFactor = Math.max(dist, 1.0);
+                const missingHp = unit.maxHp - unit.hp;
+                const score = missingHp / distanceFactor;
+
+                if (score > highestScoreOverall) {
+                    highestScoreOverall = score;
+                    bestTargetOverall = unit;
+                }
+            }
+
+            // If a best target was found anywhere...
+            if (bestTargetOverall) {
+                const distToBest = this.distanceTo(bestTargetOverall);
+
+                // Move towards it only if it's not already very close (outside ~70% heal range)
+                if (distToBest > this.healRange * 0.7) {
+                     const dx = bestTargetOverall.x - this.x;
+                     const dy = bestTargetOverall.y - this.y;
+                     // distToBest is already calculated, use it for normalization
+                     if (distToBest > 0) { // Avoid division by zero if somehow target is at exact same spot
+                        return { dx: dx / distToBest, dy: dy / distToBest }; // Return normalized direction
+                     }
+                }
+            }
+
+            // If no target found, or target is already close enough, no specific healing movement needed.
+            return null;
+        }
+
+           // Heals the single "best" target ally (NOT self) within healRange
+      // Best is determined by a score combining missing health and proximity.
+      healNearbyUnits() {
+          let bestTarget = null;
+          let highestScore = -1; // Use -1 to ensure any valid target is chosen initially
+
+          // Find the best target unit (NOT self) currently within healRange
+          for (const unit of units) {
+              // Skip self & units at full health
+              if (unit === this || unit.hp >= unit.maxHp) continue;
+
+              const dist = this.distanceTo(unit);
+
+              // Check if IN heal range
+              if (dist < this.healRange) {
+                  // Calculate score: missing health / distance
+                  // Add a small amount to distance to prevent division by zero
+                  // and slightly de-prioritize targets right on top of the mage.
+                  const distanceFactor = Math.max(dist, 1.0); // Avoid division by zero or tiny distances
+                  const missingHp = unit.maxHp - unit.hp;
+                  const score = missingHp / distanceFactor;
+
+                  // If this unit has a higher score than the best found so far
+                  if (score > highestScore) {
+                      highestScore = score;
+                      bestTarget = unit;
+                  }
+              }
+          }
+
+          // If a valid target was found within range based on score, heal only that target
+          if (bestTarget) {
+              const oldHp = bestTarget.hp;
+              bestTarget.hp = Math.min(bestTarget.hp + this.healRate, bestTarget.maxHp);
+
+              // Set the visual flag if healing occurred
+              if (bestTarget.hp > oldHp) {
+                 bestTarget.isBeingHealed = true;
+              }
+          }
+      }
+
+      triggerBounceOff() {
+          let enemyInRange = false;
+          for (const enemy of enemies) {
+              if (enemy.hp <= 0) continue;
+              const dist = this.distanceTo(enemy);
+              if (dist < this.bounceTriggerRange) {
+                  enemyInRange = true;
+                  break;
+              }
+          }
+          if (enemyInRange) {
+              this.performBounce();
+          }
+      }
+
+      performBounce() {
+          // console.log("Mage Bounce!"); // Debugging
+          ctx.beginPath(); // Visual effect for bounce
+          ctx.arc(this.x, this.y, this.bounceEffectRange, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(46, 204, 113, 0.2)'; // Semi-transparent green circle
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(46, 204, 113, 0.5)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+
+          for (const enemy of enemies) {
+              if (enemy.hp <= 0) continue;
+              const dist = this.distanceTo(enemy);
+
+              if (dist > 0 && dist < this.bounceEffectRange) {
+                  const dx = enemy.x - this.x;
+                  const dy = enemy.y - this.y;
+                  // Normalized direction vector pointing away from the mage
+                  const normalizedX = dx / dist;
+                  const normalizedY = dy / dist;
+
+                  // Apply a force pushing the enemy away
+                  enemy.x += normalizedX * this.bounceForce;
+                  enemy.y += normalizedY * this.bounceForce;
+
+                  // Ensure bounced enemies don't go out of bounds immediately
+                  enemy.enforceBounds();
+                  // Optional: Add a small stun or slow effect here
+              }
+          }
+          this.bounceCooldown = this.bounceCooldownMax; // Reset cooldown
+      }
+
+      // Mages don't shoot projectiles in this setup
+      shoot(target) { }
+      attack(target) { } // Mages don't melee attack
+
+    } // End of Mage Class
+
+
+    // --- Projectile Class ---
+    class Projectile {
+      constructor(x, y, target, damage, owner) { // Added damage and owner
+        this.x = x;
+        this.y = y;
+        this.target = target;
+        this.damage = damage;
+        this.owner = owner; // The unit that fired the projectile
+        this.speed = 5;
+        this.radius = 4;
+        this.color = 'black';
+        this.done = false; // Flag for removal
+      }
+
+      update() {
+        if (this.target.hp <= 0 || !this.target) {
+          this.done = true; // Target died or disappeared
+          return;
+        }
+
+        const dx = this.target.x - this.x;
+        const dy = this.target.y - this.y;
+        const dist = Math.hypot(dx, dy);
+
+        // Check for hit (collision)
+        if (dist < this.target.radius + this.radius || dist < this.speed) {
+          this.target.hp -= this.damage;
+          this.done = true;
+          
+                // Ensure the owner unit clears its target if its current target just died
+                if (this.owner && this.owner.target === this.target) {
+                    this.owner.target = null;
+                
+           }
+        } else {
+          // Move towards target
+          this.x += (dx / dist) * this.speed;
+          this.y += (dy / dist) * this.speed;
+        }
+      }
+
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+      }
+    } // End of Projectile Class
+
+    // --- Game Functions ---
+
+    function spawnUnit(type) {
+      if (!gameRunning) return;
+      const costs = { melee: 10, archer: 15, mage: 50 };
+      const cost = costs[type] || 0; // Default cost 0 if type not found
+
+      if (type !== 'enemy') { // Player unit spawn
+          if (score < cost) {
+              // console.log(`Not enough gold to spawn ${type}. Need ${cost}, have ${score}`);
+              // Optional: Add visual feedback (e.g., disable button or flash score red)
+              return;
+          }
+          score -= cost;
+          updateScoreDisplay();
+      }
+
+      // Spawn player units near the castle, enemies near the top
+      let spawnX, spawnY;
+      if (type === 'enemy') {
+          spawnX = Math.random() * (canvas.width - SAFE_MARGIN * 2) + SAFE_MARGIN;
+          spawnY = SAFE_MARGIN + Math.random() * 50; // Spawn near top edge
+      } else {
+          // Spawn player units in a zone in front of the castle
+          const spawnZoneY = castle.y - castle.height / 2 - 60;
+          spawnX = castle.x + (Math.random() - 0.5) * castle.width * 1.5;
+          spawnY = spawnZoneY + (Math.random() - 0.5) * 40;
+          // Clamp spawn position to be within canvas bounds
+          spawnX = Math.max(SAFE_MARGIN, Math.min(spawnX, canvas.width - SAFE_MARGIN));
+          spawnY = Math.max(SAFE_MARGIN, Math.min(spawnY, canvas.height - SAFE_MARGIN - castle.height)); // Prevent spawning inside castle visually
+      }
+
+
+      let newUnit;
+      if (type === 'mage') {
+          newUnit = new Mage(spawnX, spawnY);
+      } else { // Melee, Archer, or Enemy
+          newUnit = new Unit(spawnX, spawnY, type);
+      }
+
+      if (type === 'enemy') {
+          enemies.push(newUnit);
+      } else {
+          units.push(newUnit);
+      }
+    }
+
+     function updateWaveStatusDisplay(message) {
+        const statusElement = document.getElementById('waveStatus');
+        if (statusElement) {
+            statusElement.innerText = message;
+        }
+    }
+
+    function startNextWave() {
+        currentWave++;
+        waveState = 'SPAWNING';
+
+        // Calculate wave parameters
+        enemiesToSpawnThisWave = BASE_ENEMY_COUNT + (currentWave - 1) * ENEMY_COUNT_INCREASE_PER_WAVE;
+        waveSpawnInterval = Math.max(MIN_SPAWN_INTERVAL, BASE_SPAWN_INTERVAL - (currentWave - 1) * SPAWN_INTERVAL_DECREASE_PER_WAVE);
+
+        enemiesSpawnedThisWave = 0;
+        spawnTimer = waveSpawnInterval; // Start ready to spawn first enemy relatively quickly
+
+        console.log(`Starting Wave ${currentWave}: ${enemiesToSpawnThisWave} enemies, spawn interval ${waveSpawnInterval} frames.`);
+        updateWaveStatusDisplay(`Wave ${currentWave} Starting!`);
+
+        // No explicit wave duration timer; wave ends when all enemies are spawned.
+        waveTimer = 0; // Reset or repurpose waveTimer if needed later
+    }
+
+    function updateWaveLogic() {
+        if (!gameRunning) return;
+
+        if (waveState === 'INTERMISSION') {
+            waveTimer--; // Countdown intermission timer
+
+            // Display remaining time (optional, convert frames to seconds)
+            const secondsLeft = Math.ceil(waveTimer / 60);
+            updateWaveStatusDisplay(`Wave ${currentWave} Complete! Next wave in ${secondsLeft}s...`);
+
+            if (waveTimer <= 0) {
+                startNextWave();
+            }
+        } else if (waveState === 'SPAWNING') {
+            spawnTimer--; // Countdown timer for next spawn
+
+            if (spawnTimer <= 0 && enemiesSpawnedThisWave < enemiesToSpawnThisWave) {
+                spawnUnit('enemy'); // Spawn one enemy
+                enemiesSpawnedThisWave++;
+                spawnTimer = waveSpawnInterval; // Reset timer for the next spawn
+
+                // Update display (optional)
+                updateWaveStatusDisplay(`Wave ${currentWave} | Spawning: ${enemiesSpawnedThisWave} / ${enemiesToSpawnThisWave}`);
+            }
+
+            // Check if all enemies for this wave have been spawned
+            if (enemiesSpawnedThisWave >= enemiesToSpawnThisWave) {
+            	  // Award bonus immediately after last enemy spawns for Wave 1 onwards
+            if (currentWave > 0) {
+                // Calculate the reward
+                const waveReward = WAVE_CLEAR_BASE_GOLD + (currentWave * WAVE_CLEAR_GOLD_PER_WAVE);
+
+                // Add reward to score/gold
+                score += waveReward;
+                mathScore += WAVE_CLEAR_GOLD_PER_WAVE*2; // Assuming you want to add to both
+
+                // Log feedback to console
+                console.log(`Wave ${currentWave} spawning complete! Bonus: +${waveReward} Gold/Score`);
+
+                // Update the score display on the screen
+                updateScoreDisplay();
+
+                // Optional: Add a brief visual flash to the score display
+                const scoreElement = document.getElementById('scoreDisplay');
+                if (scoreElement) {
+                    scoreElement.style.transition = 'background-color 0.1s ease-in-out';
+                    scoreElement.style.backgroundColor = 'lightgoldenrodyellow';
+                    setTimeout(() => {
+                        scoreElement.style.backgroundColor = ''; // Revert color
+                    }, 200); // Flash duration
+                }
+            }
+                waveState = 'INTERMISSION';
+                waveTimer = BASE_INTERMISSION_DURATION; // Start the standard intermission countdown
+                console.log(`Wave ${currentWave} spawning complete. Starting intermission.`);
+                // Update display immediately for intermission start
+                 updateWaveStatusDisplay(`Wave ${currentWave} Complete! Prepare for Wave ${currentWave + 1}...`);
+            }
+        }
+    }
+
+	  function handleKeyPress(event) {
+    // Ignore key presses if the game isn't running
+    if (!gameRunning) return;
+
+    const key = event.key;
+    const lowerKey = key.toLowerCase(); // Use lowercase for checking m, a, g
+    const answerInput = document.getElementById('answerInput');
+    const isInputFocused = document.activeElement === answerInput;
+
+    // Define keys that are ESSENTIAL for the number input field
+    const essentialInputKeys = [
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        '-', // Minus sign
+        'Backspace', 'Delete',
+        'ArrowLeft', 'ArrowRight',
+        'Enter', // Allows submitting the form via Enter key
+        'Tab'    // Allows standard navigation
+        // Add 'Home', 'End' if needed
+    ];
+
+    // If the input field is focused AND the key is essential for typing, allow it
+    if (isInputFocused && essentialInputKeys.includes(key)) {
+        return; // Allow default behavior (typing number, deleting, etc.)
+    }
+
+    // Handle the game shortcuts (M, A, G)
+    let shortcutUsed = false;
+    switch (lowerKey) {
+        case 'm': // M key for Melee
+            spawnUnit('melee');
+            flashButton('melee');
+            shortcutUsed = true;
+            break;
+        case 'a': // A key for Archer
+            spawnUnit('archer');
+            flashButton('archer');
+            shortcutUsed = true;
+            break;
+        case 'g': // G key for Mage
+            spawnUnit('mage');
+            flashButton('mage');
+            shortcutUsed = true;
+            break;
+    }
+
+    // If a shortcut key (M, A, G) was just processed, prevent its default action.
+    // This should reliably stop 'm', 'a', or 'g' from appearing in the input box
+    // if it happened to have focus when the key was pressed.
+    if (shortcutUsed) {
+        event.preventDefault();
+    }
+}
     
-    <script src="game.js"></script>
+    function gameOver() {
+        if (!gameRunning) return; // Prevent multiple calls
+        console.log("GAME OVER");
+        gameRunning = false; // Stop game logic
+
+        // Display game over screen
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        gameOverScreen.style.display = 'flex'; // Use flex for centering
+        gameOverScreen.style.flexDirection = 'column';
+        gameOverScreen.style.justifyContent = 'center';
+        gameOverScreen.style.alignItems = 'center';
+
+        const finalScoreDisplay = gameOverScreen.querySelector('span');
+        if(finalScoreDisplay) {
+            finalScoreDisplay.innerText = `Final Score: ${mathScore}`;
+        } else {
+             // Fallback if span not found
+             gameOverScreen.innerHTML = `Game Over<br/>Final Score: ${mathScore}`;
+        }
+
+        // Optional: Add a button or click handler to restart
+        // gameOverScreen.onclick = () => { location.reload(); }; // Simple reload to restart
+    }
+
+
+    function gameLoop() {
+      if (!gameRunning) return; // Exit loop if game is over
+
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw background elements
+      drawCastle();
+		 updateWaveLogic(); // Handle wave progression and enemy spawning
+      // Update and Draw Units (player and enemy)
+      [...units, ...enemies].forEach(u => {
+        if (u.update) u.update(); // Make sure update exists before calling
+        if (u.draw) u.draw();   // Make sure draw exists
+      });
+
+      // Update and Draw Projectiles
+      projectiles.forEach((p, index) => {
+        if (p.update) p.update();
+        if (p.draw) p.draw();
+      });
+
+      // Remove 'done' projectiles
+      for (let i = projectiles.length - 1; i >= 0; i--) {
+        if (projectiles[i].done) {
+          projectiles.splice(i, 1);
+        }
+      }
+
+       // Check for castle destruction (redundant check, but safe)
+       if (castle.hp <= 0) {
+           gameOver();
+       }
+
+      // Request next frame
+      requestAnimationFrame(gameLoop);
+    }
+
+    // --- Initial Setup ---
+    updateScoreDisplay();
+    askMathProblem();
+     currentWave = 0; // Start before Wave 1
+    waveState = 'INTERMISSION';
+    waveTimer = INITIAL_INTERMISSION_DURATION; // Set initial pause before Wave 1 starts
+    updateWaveStatusDisplay(`Get Ready! Wave 1 starting soon...`);
+    gameLoop(); // Start the main game loop
+    
+    window.addEventListener('keydown', handleKeyPress);
+    const answerInput = document.getElementById('answerInput'); // Get reference once if possible outside loop
+
+if (answerInput) { // Make sure the element exists before adding listener
+  answerInput.addEventListener('input', function(event) {
+    // Get the current value
+    const value = event.target.value;
+
+    // Remove any 'e' or 'E' characters using regex (global, case-insensitive)
+    // Also remove '+' as some browsers allow it in number fields
+    const sanitizedValue = value.replace(/[eE+]/g, '');
+
+    // If the sanitized value is different from the original value, update the input
+    if (sanitizedValue !== value) {
+        event.target.value = sanitizedValue;
+    }
+  });
+} else {
+    console.error("Could not find answerInput to attach input listener!");
+}
+
+  </script>
 </body>
 </html>
