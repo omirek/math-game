@@ -118,7 +118,22 @@
     const BASE_SPAWN_INTERVAL = 150; // Frames (2 seconds)
     const SPAWN_INTERVAL_DECREASE_PER_WAVE = 1; // Frames
     const MIN_SPAWN_INTERVAL = 45; // Minimum frames (0.5 seconds)
-
+    const sndSpawnSuccess = new Audio('sounds/spawn_success.wav');
+    const sndNoGold = new Audio('sounds/no_gold.wav');
+    const sndEnemySpawn = new Audio('sounds/enemy_spawn.wav');
+    const sndArcherFire = new Audio('sounds/archer_fire.wav');
+    const sndMeleeHit = new Audio('sounds/melee_hit.wav');
+    const sndArrowHit = new Audio('sounds/arrow_hit.wav');
+    const sndMageBounce = new Audio('sounds/mage_bounce.wav');
+    const sndHealPulse = new Audio('sounds/heal_pulse.wav'); // Keep this one short!
+    const sndMathCorrect = new Audio('sounds/math_correct.wav');
+    const sndMathIncorrect = new Audio('sounds/math_incorrect.wav');
+    const sndWaveStart = new Audio('sounds/wave_start.wav');
+    const sndGameOver = new Audio('sounds/game_over.wav');
+    // Optional: Adjust volume (0.0 to 1.0) if needed
+    // sndSpawnSuccess.volume = 0.8;
+    // sndNoGold.volume = 0.7;
+    // ... etc ...
     const castle = {
       x: canvas.width / 2,
       y: canvas.height - 60, // Center Y of the castle structure base
@@ -146,6 +161,22 @@
     }
     // --- END ADDITION ---
 
+
+   function playSound(sound) {
+        // Check if sound object is valid
+        if (sound && typeof sound.play === 'function') {
+            // Reset playback to the start - allows rapid re-triggering
+            sound.currentTime = 0;
+            sound.play().catch(error => {
+                // Autoplay restrictions might prevent sound initially
+                // Often resolves after first user interaction (click/key)
+                // console.warn("Sound playback failed:", error);
+            });
+        } else {
+            console.warn("Attempted to play invalid sound object:", sound);
+        }
+    }
+	  
    function updateScoreDisplay() {
      document.getElementById('score').innerText = score;
      document.getElementById('mathScore').innerText = mathScore;
@@ -266,12 +297,14 @@
         mathScore += totalGold; // Use the same value for simplicity, or calculate differently
 
         updateScoreDisplay();
+	playSound(sndMathCorrect);
         // Optional: Visual feedback for correct answer
         document.getElementById('mathProblem').style.backgroundColor = 'lightgreen';
         setTimeout(() => { document.getElementById('mathProblem').style.backgroundColor = ''; }, 200);
 
       } else {
          // Optional: Visual feedback for incorrect answer
+	playSound(sndMathIncorrect);
         document.getElementById('mathProblem').style.backgroundColor = 'lightcoral';
         setTimeout(() => { document.getElementById('mathProblem').style.backgroundColor = ''; }, 200);
       }
@@ -550,6 +583,12 @@
         if (this.cooldown <= 0 && target && target.hp > 0) {
           target.hp -= this.attackDamage;
           this.cooldown = this.attackCooldown;
+	  // --- ADD SOUND ---
+    // Play hit sound only if damage was actually dealt (target hp decreased)
+    if (target.hp < oldHp) {
+         playSound(sndMeleeHit);
+    }
+    // --- END SOUND ---
            if (target.hp <= 0) {
                this.target = null; // Target died, find new one next frame
            }
@@ -560,6 +599,7 @@
         if (this.cooldown <= 0 && target && target.hp > 0) {
           projectiles.push(new Projectile(this.x, this.y, target, this.projectileDamage, this)); // Pass damage and owner
           this.cooldown = this.attackCooldown;
+	  playSound(sndArcherFire);
         }
       }
 
@@ -706,6 +746,7 @@
               // Set the visual flag if healing occurred
               if (bestTarget.hp > oldHp) {
                  bestTarget.isBeingHealed = true;
+		 playSound(sndHealPulse); // Ensure this sound is short!
               }
           }
       }
@@ -727,6 +768,7 @@
 
       performBounce() {
           // console.log("Mage Bounce!"); // Debugging
+	  playSound(sndMageBounce);
           ctx.beginPath(); // Visual effect for bounce
           ctx.arc(this.x, this.y, this.bounceEffectRange, 0, Math.PI * 2);
           ctx.fillStyle = 'rgba(46, 204, 113, 0.2)'; // Semi-transparent green circle
@@ -794,6 +836,13 @@
         if (dist < this.target.radius + this.radius || dist < this.speed) {
           this.target.hp -= this.damage;
           this.done = true;
+
+	  // --- ADD SOUND ---
+     // Play hit sound only if damage was dealt
+     if(this.target.hp < oldHp) {
+        playSound(sndArrowHit);
+     }
+     // --- END SOUND ---
           
                 // Ensure the owner unit clears its target if its current target just died
                 if (this.owner && this.owner.target === this.target) {
@@ -833,12 +882,14 @@
 
       if (type !== 'enemy') { // Player unit spawn
           if (score < cost) {
+	      playSound(sndNoGold);
               console.log(`Not enough gold to spawn ${type}. Need ${cost}, have ${score}`);
                flashElement(getSpawnButtonByType(type), 'lightcoral'); // Helper needed
               return;
           }
           score -= cost;
           updateScoreDisplay();
+	  playSound(sndSpawnSuccess); // Play sound on successful spawn
       }
 
       // Spawn player units near the castle, enemies near the top
@@ -866,6 +917,7 @@
 
       if (type === 'enemy') {
           enemies.push(newUnit);
+	  playSound(sndEnemySpawn);
       } else {
           units.push(newUnit);
       }
@@ -948,6 +1000,7 @@
     function startNextWave() {
         currentWave++;
         waveState = 'SPAWNING';
+	playSound(sndWaveStart);
 
         // Calculate wave parameters
         enemiesToSpawnThisWave = BASE_ENEMY_COUNT + (currentWave - 1) * ENEMY_COUNT_INCREASE_PER_WAVE;
@@ -1085,6 +1138,7 @@
         if (!gameRunning) return; // Prevent multiple calls
         console.log("GAME OVER");
         gameRunning = false; // Stop game logic
+	playSound(sndGameOver);
 
         // Display game over screen
         const gameOverScreen = document.getElementById('gameOverScreen');
