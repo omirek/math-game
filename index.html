@@ -119,7 +119,7 @@
     const SPAWN_INTERVAL_DECREASE_PER_WAVE = 1; // Frames
     const MIN_SPAWN_INTERVAL = 45; // Minimum frames (0.5 seconds)
     const sndSpawnSuccess = new Audio('sounds/cash.mp3');
-    const sndNoGold = new Audio('sounds/no_money.mp3');
+    const sndNoGold = new Audio('sounds/no-money.mp3');
     const sndEnemySpawn = new Audio('sounds/attack.mp3');
     const sndArcherFire = new Audio('sounds/shoot.mp3');
     const sndMeleeHit = new Audio('sounds/sword.mp3');
@@ -579,20 +579,35 @@
           return Math.hypot(dx, dy);
       }
 
-      attack(target) {
+           attack(target) {
+        // Check if attack is possible (cooldown ready, valid target with HP)
         if (this.cooldown <= 0 && target && target.hp > 0) {
-          target.hp -= this.attackDamage;
-          this.cooldown = this.attackCooldown;
-	  // --- ADD SOUND ---
-    // Play hit sound only if damage was actually dealt (target hp decreased)
-    if (target.hp < oldHp) {
-         playSound(sndMeleeHit);
-    }
-    // --- END SOUND ---
-           if (target.hp <= 0) {
-               this.target = null; // Target died, find new one next frame
-           }
+
+            // --- START FIX: Ensure oldHp is defined here ---
+            const oldHp = target.hp; // Store target's HP *before* dealing damage
+            // --- END FIX ---
+
+            // Apply damage
+            target.hp -= this.attackDamage;
+
+            // Trigger damage flash
+            target.damageFlashTimer = FLASH_DURATION;
+
+            // Reset attacker's cooldown
+            this.cooldown = this.attackCooldown;
+
+            // Play hit sound only if damage was actually dealt (target hp decreased)
+            // Now 'oldHp' is guaranteed to be defined in this scope
+            if (target.hp < oldHp) {
+                 playSound(sndMeleeHit);
+            }
+
+            // Check if the target died from this attack
+             if (target.hp <= 0) {
+                 this.target = null; // Clear attacker's target reference if target died
+             }
         }
+        // Note: No 'else' block needed here unless you want specific logging for failed attacks
       }
 
       shoot(target) {
@@ -1133,7 +1148,23 @@
         event.preventDefault();
     }
 }
-    
+
+ function flashButton(unitType) {
+        const buttons = document.querySelectorAll('#controls button');
+        let targetButton = null;
+        if (unitType === 'melee') targetButton = buttons[0];
+        else if (unitType === 'archer') targetButton = buttons[1];
+        else if (unitType === 'mage') targetButton = buttons[2];
+
+        if (targetButton) {
+            const originalColor = targetButton.style.backgroundColor;
+            targetButton.style.backgroundColor = 'lightgreen'; // Highlight color
+            setTimeout(() => {
+                targetButton.style.backgroundColor = originalColor; // Revert color
+            }, 150); // Highlight duration (150ms)
+        }
+    }
+	  
     function gameOver() {
         if (!gameRunning) return; // Prevent multiple calls
         console.log("GAME OVER");
