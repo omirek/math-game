@@ -849,6 +849,7 @@
 
         // Check for hit (collision)
         if (dist < this.target.radius + this.radius || dist < this.speed) {
+	  const oldHp = this.target.hp; // Store target's HP *before* dealing damage
           this.target.hp -= this.damage;
           this.done = true;
 
