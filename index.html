@@ -131,9 +131,18 @@
     const sndWaveStart = new Audio('sounds/start-game.mp3');
     const sndGameOver = new Audio('sounds/game-over.mp3');
     // Optional: Adjust volume (0.0 to 1.0) if needed
-    // sndSpawnSuccess.volume = 0.8;
-    // sndNoGold.volume = 0.7;
-    // ... etc ...
+    sndSpawnSuccess.volume = 1;
+    sndNoGold.volume = 1;
+    sndEnemySpawn.volume = 1;
+    sndArcherFire.volume = 0.3;
+    sndMeleeHit.volume = 0.5;
+    sndArrowHit.volume = 0.3;
+    sndMageBounce.volume = 0.7;
+    sndHealPulse.volume = 0.7;
+    sndMathCorrect.volume = 1;
+    sndMathIncorrect.volume = 1;
+    sndWaveStart.volume = 1;
+    sndGameOver.volume = 1;
     const castle = {
       x: canvas.width / 2,
       y: canvas.height - 60, // Center Y of the castle structure base
