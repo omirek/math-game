@@ -335,6 +335,9 @@
         this.hp = this.maxHp;
         this.target = null;
         this.cooldown = 0; // For attacks/abilities
+	this.bounceVelX = 0; // Current velocity component from bounce X
+        this.bounceVelY = 0; // Current velocity component from bounce Y
+        this.bounceDecay = 0.92; // Velocity retained each frame (e.g., 0.92 = loses 8% per frame)
 
         // Type-specific properties
         switch (type) {
@@ -535,6 +538,23 @@
         let finalDX = targetDX + separationDX;
         let finalDY = targetDY + separationDY;
 
+	if (Math.abs(this.bounceVelX) > 0.01 || Math.abs(this.bounceVelY) > 0.01) {
+            // Add bounce velocity to the intended movement
+            // The bounce effect ADDS to other movement forces
+            finalDX += this.bounceVelX;
+            finalDY += this.bounceVelY;
+
+            // Apply decay to slow down the bounce effect over time
+            this.bounceVelX *= this.bounceDecay;
+            this.bounceVelY *= this.bounceDecay;
+
+            // If velocity becomes negligible, stop the bounce effect completely
+            if (Math.hypot(this.bounceVelX, this.bounceVelY) < 0.1) {
+                this.bounceVelX = 0;
+                this.bounceVelY = 0;
+            }
+        }
+
         // --- Apply Final Movement ---
         const finalDist = Math.hypot(finalDX, finalDY);
         if (finalDist > 0) {
@@ -677,6 +697,7 @@
         this.bounceTriggerRange = 70; // Enemies within this range can trigger the bounce
         this.bounceEffectRange = 200; // Enemies within this range are affected when bounce triggers
         this.bounceForce = 150; // How far enemies are pushed
+	this.bounceInitialSpeed = 4.0; // Adjust this value to control initial push speed
       }
 
       // Called BY the base Unit.update() method specifically for mages
@@ -813,13 +834,8 @@
                   const normalizedX = dx / dist;
                   const normalizedY = dy / dist;
 
-                  // Apply a force pushing the enemy away
-                  enemy.x += normalizedX * this.bounceForce;
-                  enemy.y += normalizedY * this.bounceForce;
-
-                  // Ensure bounced enemies don't go out of bounds immediately
-                  enemy.enforceBounds();
-                  // Optional: Add a small stun or slow effect here
+                  enemy.bounceVelX = normalizedX * this.bounceInitialSpeed;
+                  enemy.bounceVelY = normalizedY * this.bounceInitialSpeed;
               }
           }
           this.bounceCooldown = this.bounceCooldownMax; // Reset cooldown
