@@ -158,7 +158,7 @@ const firebaseConfig = {
     // Get a Firestore instance
     const db = getFirestore(app); // Pass the initialized app
     const highScoresCollectionRef = collection(db, 'highscores'); // Reference to the collection
-    const MAX_HIGH_SCORES = 15;
+    const MAX_HIGH_SCORES = 10;
     // --- END FIREBASE V9+ SETUP ---
 	  
     const canvas = document.getElementById('gameCanvas');
