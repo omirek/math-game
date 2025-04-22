@@ -1400,7 +1400,7 @@ function displayHighScores(scores, containerId) {
         }
     }
 	  
-    function gameOver() {
+    async function gameOver() {
         if (!gameRunning) return; // Prevent multiple calls
         console.log("GAME OVER");
         gameRunning = false; // Stop game logic
