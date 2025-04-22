@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Math-Defend</title>
+  <title>MathDefend</title>
   <style>
     body { margin: 0; overflow: hidden; font-family: sans-serif; }
     canvas { background: #f0f0f0; display: block; margin: 0 auto; border: 1px solid #ccc; }
@@ -1281,6 +1281,7 @@
         if (u.update) u.update(); // Make sure update exists before calling
         if (u.draw) u.draw();   // Make sure draw exists
       });
+	    
 
       // Update and Draw Projectiles
       projectiles.forEach((p, index) => {
@@ -1294,17 +1295,7 @@
           projectiles.splice(i, 1);
         }
       }
-
-       // Check for castle destruction (redundant check, but safe)
-       if (castle.hp <= 0) {
-           gameOver();
-       }
-
-      // Request next frame
-      requestAnimationFrame(gameLoop);
-    }
-
-         // --- START DEBUG: Draw Test Indicator for Shockwaves ---
+	   // --- START DEBUG: Draw Test Indicator for Shockwaves ---
       ctx.save();
       units.forEach(unit => {
            // --- DETAILED LOGGING ---
@@ -1327,7 +1318,14 @@
         });
         ctx.restore();
         // --- End DEBUG ---
-	  
+       // Check for castle destruction (redundant check, but safe)
+       if (castle.hp <= 0) {
+           gameOver();
+       }
+
+      // Request next frame
+      requestAnimationFrame(gameLoop);
+    } 
     updateScoreDisplay();
     askMathProblem();
      currentWave = 0; // Start before Wave 1
