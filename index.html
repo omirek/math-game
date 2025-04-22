@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Math-Defend</title>
+  <title>MathDefend</title>
   <style>
     body { margin: 0; overflow: hidden; font-family: sans-serif; }
     canvas { background: #f0f0f0; display: block; margin: 0 auto; border: 1px solid #ccc; }
@@ -39,9 +39,8 @@
      }
     #scoreDisplay { text-align: center; margin: 10px; font-size: 16px; }
     #mathProblem { text-align: center; margin: 10px; font-size: 18px; }
-        #gameOverScreen {
+    #gameOverScreen {
       display: none; /* Keep this */
-      display: flex; /* Use flexbox for centering */
       flex-direction: column; /* Stack items vertically */
       justify-content: center; /* Center vertically */
       align-items: center; /* Center horizontally */
@@ -1435,6 +1434,7 @@ const firebaseConfig = {
     }
 	  
     async function gameOver() {
+	console.error("!!! GAMEOVER FUNCTION ENTERED !!!"); // Add this line
         if (!gameRunning) return; // Prevent multiple calls
         console.log("GAME OVER");
         gameRunning = false; // Stop game logic
