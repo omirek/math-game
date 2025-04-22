@@ -369,7 +369,7 @@
             this.castleDamage = 0.2; // Damage per frame to castle
 	    this.bounceVelX = 0; // Current velocity component from bounce X
         this.bounceVelY = 0; // Current velocity component from bounce Y
-        this.bounceDecay = 0.98; // Velocity retained each frame (e.g., 0.92 = loses 8% per frame)
+        this.bounceDecay = 0.95; // Velocity retained each frame (e.g., 0.92 = loses 8% per frame)
             break;
           default:
              this.color = 'grey';
@@ -715,7 +715,7 @@
         this.bounceTriggerRange = 70; // Enemies within this range can trigger the bounce
         this.bounceEffectRange = 200; // Enemies within this range are affected when bounce triggers
         this.bounceForce = 150; // How far enemies are pushed
-	this.bounceInitialSpeed = 10; // Adjust this value to control initial push speed
+	this.bounceInitialSpeed = 9; // Adjust this value to control initial push speed
       }
 
       // Called BY the base Unit.update() method specifically for mages
