@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>MathDefend</title>
+  <title>Math Defend</title>
   <style>
     body { margin: 0; overflow: hidden; font-family: sans-serif; }
     canvas { background: #f0f0f0; display: block; margin: 0 auto; border: 1px solid #ccc; }
@@ -1295,29 +1295,47 @@
           projectiles.splice(i, 1);
         }
       }
-	   // --- START DEBUG: Draw Test Indicator for Shockwaves ---
+	         // --- Draw Active Shockwaves (Orange/Red) ---
+      // Drawing AFTER units ensures the effect isn't immediately covered
       ctx.save();
       units.forEach(unit => {
-           // --- DETAILED LOGGING ---
-            // Log status for ALL mages every frame where the loop runs
-            if (unit instanceof Mage) {
-                 console.log(`gameLoop Check: Mage (${unit.x.toFixed(0)}, ${unit.y.toFixed(0)}): instanceof Mage? YES, shockwaveActive? ${unit.shockwaveActive}, Timer: ${unit.shockwaveTimer}`);
-            }
-            // --- END DETAILED LOGGING ---
+          // Check if it's a Mage AND its shockwave is active
+          if (unit instanceof Mage && unit.shockwaveActive) {
 
-            // Check if it's a Mage AND its shockwave is active
-            if (unit instanceof Mage && unit.shockwaveActive) {
+              // --- START REPLACEMENT: Restore Dynamic Circle ---
+              // Calculate animation progress (0 = start, 1 = end)
+              const progress = 1.0 - (unit.shockwaveTimer / unit.shockwaveDuration);
 
-                // --- Simple Visual Debug: Draw a small, solid square ---
-                ctx.fillStyle = 'red'; // Use a highly visible color
-                ctx.fillRect(unit.x - 5, unit.y - 5, 10, 10);
+              // Calculate current radius based on progress (linear expansion)
+              const currentRadius = unit.shockwaveMaxRadius * progress;
 
-                // Log *only* when attempting to draw
-                // console.log(`DEBUG: Drawing shockwave indicator for Mage at (${unit.x.toFixed(0)}, ${unit.y.toFixed(0)}), Timer: ${unit.shockwaveTimer}`);
-            }
-        });
-        ctx.restore();
-        // --- End DEBUG ---
+              // Calculate opacity (fades out from 1 to 0)
+              const opacity = 1.0 - progress;
+
+              // Set drawing style (e.g., Orange/Red fading out)
+              // Ensure opacity is not negative if timer logic is slightly off
+              const safeOpacity = Math.max(0, opacity);
+              ctx.strokeStyle = `rgba(255, 100, 0, ${safeOpacity})`; // Orange-Red, fades alpha
+
+              // Make line thinner as it expands (optional)
+              const currentLineWidth = Math.max(1, 4 * (1.0 - progress) + 1);
+              ctx.lineWidth = currentLineWidth;
+
+              // Draw the expanding circle
+              ctx.beginPath();
+              ctx.arc(unit.x, unit.y, currentRadius, 0, Math.PI * 2);
+              // Only stroke if opacity is still significant to avoid drawing invisible lines
+              if (safeOpacity > 0.05) {
+                   ctx.stroke();
+              }
+              // --- END REPLACEMENT ---
+
+              // Optional: Keep this log temporarily if you want to verify parameters
+              // console.log(`DEBUG: Drawing shockwave indicator for Mage at (${unit.x.toFixed(0)}, ${unit.y.toFixed(0)}), Timer: ${unit.shockwaveTimer}`);
+          }
+      });
+      ctx.restore();
+      // --- End Draw Active Shockwaves ---
        // Check for castle destruction (redundant check, but safe)
        if (castle.hp <= 0) {
            gameOver();
