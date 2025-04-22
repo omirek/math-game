@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Math Defend</title>
+  <title>MathDefend</title>
   <style>
     body { margin: 0; overflow: hidden; font-family: sans-serif; }
     canvas { background: #f0f0f0; display: block; margin: 0 auto; border: 1px solid #ccc; }
@@ -39,22 +39,57 @@
      }
     #scoreDisplay { text-align: center; margin: 10px; font-size: 16px; }
     #mathProblem { text-align: center; margin: 10px; font-size: 18px; }
-    #gameOverScreen {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background-color: rgba(0, 0, 0, 0.8);
+        #gameOverScreen {
+      /* display: none; */ /* Keep this */
+      display: flex; /* Use flexbox for centering */
+      flex-direction: column; /* Stack items vertically */
+      justify-content: center; /* Center vertically */
+      align-items: center; /* Center horizontally */
+      position: fixed; /* Position relative to viewport */
+      top: 0;          /* Align to top */
+      left: 0;         /* Align to left */
+      width: 100vw;    /* Full viewport width */
+      height: 100vh;   /* Full viewport height */
+      background-color: rgba(0, 0, 0, 0.85); /* Slightly darker? */
       color: white;
-      font-size: 32px;
-      text-align: center;
-      padding-top: 200px;
+      font-size: 24px; /* Adjust base font size if needed */
+      text-align: center; /* Center text within elements */
+      /* padding-top: 0; */ /* Remove fixed padding-top if you had it */
+      padding: 20px; /* Add some general padding */
       z-index: 10;
-      cursor: pointer; /* Allow clicking to maybe restart later */
+      box-sizing: border-box; /* Include padding in width/height */
+      overflow-y: auto; /* Add scrollbar ONLY if content overflows */
     }
-    #gameOverScreen span { font-size: 24px; display: block; margin-top: 20px; }
+    /* Adjust heading/paragraph margins if needed */
+    #gameOverScreen h2 {
+        margin-top: 0;
+        margin-bottom: 15px;
+        font-size: 36px;
+    }
+     #gameOverScreen p {
+        margin: 10px 0;
+     }
+     #highScoreListContainer {
+         max-width: 400px; /* Limit width of score list */
+         width: 90%;
+         margin-top: 20px;
+         text-align: left; /* Align list text left */
+         border: 1px solid #555; /* Optional border */
+         padding: 15px;
+         background-color: rgba(20, 20, 20, 0.5); /* Slight background */
+         border-radius: 5px;
+     }
+      #highScoreListContainer h3 {
+          margin-top: 0;
+          text-align: center; /* Center the "High Scores:" heading */
+      }
+      #highScoreListContainer ol {
+          padding-left: 25px; /* Indent numbers slightly */
+          margin-bottom: 0;
+      }
+      #highScoreListContainer li {
+          margin-bottom: 5px; /* Space between entries */
+      }
   </style>
    <!-- Firebase v9+ Modular SDK -->
     <!-- Core App Module (You already have this) -->
@@ -1105,7 +1140,7 @@ const firebaseConfig = {
             if (scoreData.timestamp && scoreData.timestamp.toDate) { // Check if it's a Firebase timestamp
                  dateString = ` - ${scoreData.timestamp.toDate().toLocaleDateString()}`;
             }
-            item.textContent = `${index + 1}. ${nameText} - ${scoreNum}${dateString}`; // Added optional date
+            item.textContent = `${nameText} - ${scoreNum}${dateString}`; // Added optional date
             list.appendChild(item);
         });
         container.appendChild(list);
