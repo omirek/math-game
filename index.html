@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Math Defend</title>
+  <title>MathDefend</title>
   <style>
     body { margin: 0; overflow: hidden; font-family: sans-serif; }
     canvas { background: #f0f0f0; display: block; margin: 0 auto; border: 1px solid #ccc; }
@@ -724,15 +724,27 @@
       }
 
       // Called BY the base Unit.update() method specifically for mages
-      updateMageSpecifics() {
-          this.healNearbyUnits();
+            // Called BY the base Unit.update() method specifically for mages
+        updateMageSpecifics() {
+            // --- START ADDITION: Shockwave Timer Logic ---
+            // Manage the shockwave animation timer if it's active
+            if (this.shockwaveActive) {
+                this.shockwaveTimer--; // Decrement the timer each frame
+                if (this.shockwaveTimer <= 0) {
+                    this.shockwaveActive = false; // Deactivate the animation when timer runs out
+                }
+            }
+            // --- END ADDITION ---
 
-          if (this.bounceCooldown <= 0) {
-              this.triggerBounceOff();
-          } else {
-              this.bounceCooldown--;
-          }
-      }
+            // Existing Mage logic (Healing and Bounce Cooldown)
+            this.healNearbyUnits();
+
+            if (this.bounceCooldown <= 0) {
+                this.triggerBounceOff(); // Check if bounce should be triggered
+            } else {
+                this.bounceCooldown--; // Count down bounce ability cooldown
+            }
+        }
 
             // Provides movement direction towards the "best" target needing healing.
         // Best is determined by a score combining missing health and proximity.
