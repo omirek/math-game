@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Math_Defend</title>
+  <title>MathDefend</title>
   <style>
     body { margin: 0; overflow: hidden; font-family: sans-serif; }
     canvas { background: #f0f0f0; display: block; margin: 0 auto; border: 1px solid #ccc; }
@@ -1294,36 +1294,25 @@
       requestAnimationFrame(gameLoop);
     }
 
-     ctx.save(); // Save context state
+         // --- START DEBUG: Draw Test Indicator for Shockwaves ---
+      ctx.save();
       units.forEach(unit => {
-          // Check if it's a Mage and its shockwave is active
+          // Check if it's a Mage AND its shockwave is active
           if (unit instanceof Mage && unit.shockwaveActive) {
-              // Calculate animation progress (0 = start, 1 = end)
-              const progress = 1.0 - (unit.shockwaveTimer / unit.shockwaveDuration);
 
-              // Calculate current radius based on progress (linear expansion)
-              const currentRadius = unit.shockwaveMaxRadius * progress;
+              // --- Simple Visual Debug: Draw a small, solid square ---
+              ctx.fillStyle = 'red'; // Use a highly visible color
+              // Draw a 10x10 square centered roughly on the Mage
+              ctx.fillRect(unit.x - 5, unit.y - 5, 10, 10);
 
-              // Calculate opacity (fades out from 1 to 0)
-              const opacity = 1.0 - progress;
+              // Optional: Log to console to confirm this code block runs
+              // console.log(`DEBUG: Drawing shockwave indicator for Mage at (${unit.x.toFixed(0)}, ${unit.y.toFixed(0)}), Timer: ${unit.shockwaveTimer}`);
 
-              // Set drawing style (e.g., Orange/Red fading out)
-              ctx.strokeStyle = `rgba(255, 100, 0, ${opacity})`; // Orange-Red, fades alpha
-              ctx.lineWidth = 4 * (1.0 - progress) + 1; // Line gets thinner as it expands
-
-              // Draw the expanding circle
-              ctx.beginPath();
-              ctx.arc(unit.x, unit.y, currentRadius, 0, Math.PI * 2);
-              ctx.stroke();
-
-              // Countdown the timer
-              unit.shockwaveTimer--;
-              if (unit.shockwaveTimer <= 0) {
-                  unit.shockwaveActive = false; // Deactivate when timer finishes
-              }
+              // NOTE: Timer decrement logic is correctly placed in updateMageSpecifics
           }
       });
-      ctx.restore(); // Restore context state
+      ctx.restore();
+      // --- END DEBUG ---
 	  
     updateScoreDisplay();
     askMathProblem();
