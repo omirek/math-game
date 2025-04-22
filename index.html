@@ -534,43 +534,60 @@
           }
         }
 
-        // --- Combine Movement Vectors ---
-        // Simple addition works, could prioritize target movement later if needed
-        let finalDX = targetDX + separationDX;
-        let finalDY = targetDY + separationDY;
+                // --- START REFINED MOVEMENT LOGIC (Replaces Combine/Apply Section) ---
 
-	if (Math.abs(this.bounceVelX) > 0.01 || Math.abs(this.bounceVelY) > 0.01) {
-            // Add bounce velocity to the intended movement
-            // The bounce effect ADDS to other movement forces
-            finalDX += this.bounceVelX;
-            finalDY += this.bounceVelY;
+        let isBouncing = false;
+        let moveX = 0;
+        let moveY = 0;
 
-            // Apply decay to slow down the bounce effect over time
+        // --- Apply Bounce Velocity & Decay FIRST ---
+        // Check if there's significant bounce velocity remaining
+        if (Math.abs(this.bounceVelX) > 0.01 || Math.abs(this.bounceVelY) > 0.01) {
+            isBouncing = true; // Mark the unit as actively bouncing this frame
+
+            // Apply decay to the current bounce velocity *before* using it
             this.bounceVelX *= this.bounceDecay;
             this.bounceVelY *= this.bounceDecay;
 
-            // If velocity becomes negligible, stop the bounce effect completely
+            // The movement for this frame is determined by the (decayed) bounce velocity
+            moveX = this.bounceVelX;
+            moveY = this.bounceVelY;
+
+            // If velocity becomes negligible after decay, stop the bounce effect fully for next frame
             if (Math.hypot(this.bounceVelX, this.bounceVelY) < 0.1) {
                 this.bounceVelX = 0;
                 this.bounceVelY = 0;
+                // isBouncing remains true for *this frame*, but will be false next frame
             }
         }
 
-        // --- Apply Final Movement ---
-        const finalDist = Math.hypot(finalDX, finalDY);
-        if (finalDist > 0) {
-          // Normalize the final vector and multiply by speed
-          // Cap the influence of separation so units don't zip away too fast
-          const moveX = (finalDX / finalDist) * this.speed;
-          const moveY = (finalDY / finalDist) * this.speed;
-          this.x += moveX;
-          this.y += moveY;
-        }
+        // --- Apply Normal Movement ONLY IF NOT Currently Bouncing ---
+        if (!isBouncing) {
+            // Calculate the combined vector from target desire + separation force
+            const normalDX = targetDX + separationDX;
+            const normalDY = targetDY + separationDY;
+            const normalDist = Math.hypot(normalDX, normalDY);
 
-        // --- Post-Movement Actions ---
+            // If there's any normal movement direction
+            if (normalDist > 0) {
+                // Calculate movement based on the normal direction, scaled by the unit's speed
+                moveX = (normalDX / normalDist) * this.speed;
+                moveY = (normalDY / normalDist) * this.speed;
+            }
+            // Else: If no target/separation force, moveX/moveY remain 0 (unit stands still)
+        }
+        // Else: If isBouncing was true, moveX/moveY were already set by the bounce velocity above,
+        // and we intentionally skip applying normal movement.
+
+        // --- Apply the final calculated movement (either bounce OR normal) ---
+        this.x += moveX;
+        this.y += moveY;
+
+        // --- END REFINED MOVEMENT LOGIC ---
+
+        // --- Post-Movement Actions --- // This part should remain
         this.enforceBounds();
       } // End of update()
-
 
       findNearest(targets) {
         let minDist = Infinity;
