@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>MathDefend</title>
+  <title>Math-Defend</title>
   <style>
     body { margin: 0; overflow: hidden; font-family: sans-serif; }
     canvas { background: #f0f0f0; display: block; margin: 0 auto; border: 1px solid #ccc; }
@@ -726,15 +726,23 @@
       // Called BY the base Unit.update() method specifically for mages
             // Called BY the base Unit.update() method specifically for mages
         updateMageSpecifics() {
-            // --- START ADDITION: Shockwave Timer Logic ---
+              // --- START MODIFICATION: Add Logging ---
             // Manage the shockwave animation timer if it's active
             if (this.shockwaveActive) {
+                // --- DETAILED LOGGING ---
+                console.log(`Mage (${this.x.toFixed(0)}, ${this.y.toFixed(0)}): updateMageSpecifics - shockwave IS active. Timer BEFORE decrement: ${this.shockwaveTimer}`);
+                // --- END DETAILED LOGGING ---
+
                 this.shockwaveTimer--; // Decrement the timer each frame
+
                 if (this.shockwaveTimer <= 0) {
+                    // --- DETAILED LOGGING ---
+                    console.log(`%cMage (${this.x.toFixed(0)}, ${this.y.toFixed(0)}): updateMageSpecifics - Timer reached 0. Setting shockwaveActive to false.`, "color: red;");
+                    // --- END DETAILED LOGGING ---
                     this.shockwaveActive = false; // Deactivate the animation when timer runs out
                 }
             }
-            // --- END ADDITION ---
+            // --- END MODIFICATION ---
 
             // Existing Mage logic (Healing and Bounce Cooldown)
             this.healNearbyUnits();
@@ -848,9 +856,11 @@
 
      performBounce() {
             // --- START ADDITION: Trigger Shockwave ---
-            this.shockwaveActive = true;
-            this.shockwaveTimer = this.shockwaveDuration; // Start countdown
-            // --- END ADDITION ---
+          this.shockwaveActive = true;
+          this.shockwaveTimer = this.shockwaveDuration;
+          // --- DETAILED LOGGING ---
+          console.log(`%cBOUNCE TRIGGERED: Mage (${this.x.toFixed(0)}, ${this.y.toFixed(0)}): shockwaveActive SET to true, shockwaveTimer SET to ${this.shockwaveTimer}`, "color: blue; font-weight: bold;");
+          // --- END DETAILED LOGGING ---
 
             playSound(sndMageBounce);
 
@@ -1297,22 +1307,26 @@
          // --- START DEBUG: Draw Test Indicator for Shockwaves ---
       ctx.save();
       units.forEach(unit => {
-          // Check if it's a Mage AND its shockwave is active
-          if (unit instanceof Mage && unit.shockwaveActive) {
+           // --- DETAILED LOGGING ---
+            // Log status for ALL mages every frame where the loop runs
+            if (unit instanceof Mage) {
+                 console.log(`gameLoop Check: Mage (${unit.x.toFixed(0)}, ${unit.y.toFixed(0)}): instanceof Mage? YES, shockwaveActive? ${unit.shockwaveActive}, Timer: ${unit.shockwaveTimer}`);
+            }
+            // --- END DETAILED LOGGING ---
 
-              // --- Simple Visual Debug: Draw a small, solid square ---
-              ctx.fillStyle = 'red'; // Use a highly visible color
-              // Draw a 10x10 square centered roughly on the Mage
-              ctx.fillRect(unit.x - 5, unit.y - 5, 10, 10);
+            // Check if it's a Mage AND its shockwave is active
+            if (unit instanceof Mage && unit.shockwaveActive) {
 
-              // Optional: Log to console to confirm this code block runs
-              // console.log(`DEBUG: Drawing shockwave indicator for Mage at (${unit.x.toFixed(0)}, ${unit.y.toFixed(0)}), Timer: ${unit.shockwaveTimer}`);
+                // --- Simple Visual Debug: Draw a small, solid square ---
+                ctx.fillStyle = 'red'; // Use a highly visible color
+                ctx.fillRect(unit.x - 5, unit.y - 5, 10, 10);
 
-              // NOTE: Timer decrement logic is correctly placed in updateMageSpecifics
-          }
-      });
-      ctx.restore();
-      // --- END DEBUG ---
+                // Log *only* when attempting to draw
+                // console.log(`DEBUG: Drawing shockwave indicator for Mage at (${unit.x.toFixed(0)}, ${unit.y.toFixed(0)}), Timer: ${unit.shockwaveTimer}`);
+            }
+        });
+        ctx.restore();
+        // --- End DEBUG ---
 	  
     updateScoreDisplay();
     askMathProblem();
