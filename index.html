@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>MathDefend</title>
+  <title>Math Defend</title>
   <style>
     body { margin: 0; overflow: hidden; font-family: sans-serif; }
     canvas { background: #f0f0f0; display: block; margin: 0 auto; border: 1px solid #ccc; }
@@ -834,27 +834,46 @@
           }
       }
 
-      performBounce() {
+     performBounce() {
+            // --- START ADDITION: Trigger Shockwave ---
+            this.shockwaveActive = true;
+            this.shockwaveTimer = this.shockwaveDuration; // Start countdown
+            // --- END ADDITION ---
 
-	  this.shockwaveActive = true;
-          this.shockwaveTimer = this.shockwaveDuration; // Start countdown
-          // console.log("Mage Bounce!"); // Debugging
-	  playSound(sndMageBounce);
+            playSound(sndMageBounce);
 
-          ctx.beginPath();
-  ctx.arc(this.x, this.y, this.bounceEffectRange, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(46, 204, 113, 0.2)'; // Semi-transparent green circle
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(46, 204, 113, 0.5)';
-  ctx.lineWidth = 2;
-  ctx.stroke();
+            // Visual effect for bounce (Original static green circle - KEEP FOR NOW)
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.bounceEffectRange, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(46, 204, 113, 0.2)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(46, 204, 113, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            // END Static green circle drawing
 
-      // Mages don't shoot projectiles in this setup
-      shoot(target) { }
-      attack(target) { } // Mages don't melee attack
+            // Apply bounce velocity to enemies
+            for (const enemy of enemies) {
+               if (enemy.hp <= 0) continue;
+               const dist = this.distanceTo(enemy);
+               if (dist > 0 && dist < this.bounceEffectRange) {
+                   const dx = enemy.x - this.x;
+                   const dy = enemy.y - this.y;
+                   const normalizedX = dx / dist;
+                   const normalizedY = dy / dist;
+                   enemy.bounceVelX = normalizedX * this.bounceInitialSpeed;
+                   enemy.bounceVelY = normalizedY * this.bounceInitialSpeed;
+               }
+            }
+            this.bounceCooldown = this.bounceCooldownMax; // Reset cooldown
+
+        }
+
+        // Mages don't shoot projectiles in this setup
+        shoot(target) { } // This is now correctly placed AFTER performBounce closes
+        attack(target) { } // Mages don't melee attack
 
     } // End of Mage Class
-
 
     // --- Projectile Class ---
     class Projectile {
