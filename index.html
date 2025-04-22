@@ -56,6 +56,34 @@
     }
     #gameOverScreen span { font-size: 24px; display: block; margin-top: 20px; }
   </style>
+   <!-- Firebase v9+ Modular SDK -->
+    <!-- Core App Module (You already have this) -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js"; // Use your actual version if different
+
+      // Paste your actual firebaseConfig object here!
+const firebaseConfig = {
+    apiKey: "AIzaSyCx_SQ23AvzsOj1btO9YqzLQQ-C9xD07_E",
+    authDomain: "math-game-leaderboard-e6970.firebaseapp.com",
+    projectId: "math-game-leaderboard-e6970",
+    storageBucket: "math-game-leaderboard-e6970.firebasestorage.app",
+    messagingSenderId: "291357117755",
+    appId: "1:291357117755:web:e1f49d75b614ff3b227b1e"
+  };
+
+  // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+
+      // Make the initialized app available globally or pass it down
+      // For simplicity here, we can make it accessible via a global scope if needed,
+      // but ideally you'd import necessary functions directly in your main script.
+      // Let's make it accessible for now:
+      window.firebaseApp = app;
+       </script>
+
+    <!-- Firestore Module -->
+    <script type="module" src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js"></script>
+	    
 </head>
 <body>
   <div id="controls">
@@ -75,7 +103,32 @@
   <canvas id="gameCanvas" width="800" height="500"></canvas>
   <div id="gameOverScreen">Game Over!<br/><span>Final Score: 0</span></div>
 
-  <script>
+  <script>	
+     // --- START FIREBASE V9+ SETUP ---
+    // Access the initialized app from the global scope (or import if using modules for game script too)
+    const app = window.firebaseApp; // Get the app initialized in the head
+
+    // Import Firestore functions (assuming this script is NOT type="module")
+    // If this script *is* type="module", you'd use real import statements.
+    // For a standard script tag, access functions from the global firebase object:
+    const {
+        getFirestore, // Function to get DB instance
+        collection,   // Function to reference a collection
+        getDocs,      // Function to get documents
+        query,        // Function for creating queries
+        orderBy,      // Function for ordering
+        limit,        // Function for limiting results
+        addDoc,       // Function to add a new document
+        serverTimestamp // Function for server-side timestamp
+     } = firebase.firestore; // Access functions from the loaded firestore module
+
+
+    // Get a Firestore instance
+    const db = getFirestore(app); // Pass the initialized app
+    const highScoresCollectionRef = collection(db, 'highscores'); // Reference to the collection
+    const MAX_HIGH_SCORES = 15;
+    // --- END FIREBASE V9+ SETUP ---
+	  
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const SAFE_MARGIN = 40; // Keep units away from edges initially
