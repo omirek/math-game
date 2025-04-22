@@ -716,6 +716,9 @@
         this.bounceEffectRange = 200; // Enemies within this range are affected when bounce triggers
         this.bounceForce = 150; // How far enemies are pushed
 	this.bounceInitialSpeed = 9; // Adjust this value to control initial push speed
+	this.bounceAnimActive = false;
+        this.bounceAnimTimer = 0;   // Countdown timer for animation frames
+        this.bounceAnimDuration = 25; // Duration in frames (e.g., slightly less than 0.5s)
       }
 
       // Called BY the base Unit.update() method specifically for mages
@@ -832,13 +835,8 @@
       performBounce() {
           // console.log("Mage Bounce!"); // Debugging
 	  playSound(sndMageBounce);
-          ctx.beginPath(); // Visual effect for bounce
-          ctx.arc(this.x, this.y, this.bounceEffectRange, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(46, 204, 113, 0.2)'; // Semi-transparent green circle
-          ctx.fill();
-          ctx.strokeStyle = 'rgba(46, 204, 113, 0.5)';
-          ctx.lineWidth = 2;
-          ctx.stroke();
+          this.bounceAnimActive = true;
+          this.bounceAnimTimer = this.bounceAnimDuration; // Start countdown
 
 
           for (const enemy of enemies) {
@@ -1274,6 +1272,41 @@
     }
 
     // --- Initial Setup ---
+     ctx.save(); // Save context state
+      units.forEach(unit => {
+          // Check if it's a Mage and its bounce animation is active
+          if (unit instanceof Mage && unit.bounceAnimActive) {
+              // Calculate animation progress (0 = start, 1 = end)
+              const progress = 1.0 - (unit.bounceAnimTimer / unit.bounceAnimDuration);
+
+              // Calculate current radius: starts small, expands to bounceEffectRange
+              const currentRadius = unit.bounceEffectRange * progress;
+
+              // Calculate current opacity: starts higher, fades to 0
+              // Use the original base opacities (0.2 for fill, 0.5 for stroke) and multiply by fade factor
+              const fadeFactor = (1.0 - progress);
+              const currentOpacityFill = 0.2 * fadeFactor;
+              const currentOpacityStroke = 0.5 * fadeFactor;
+
+              // Set drawing styles using original RGB and calculated alpha
+              ctx.fillStyle = `rgba(46, 204, 113, ${currentOpacityFill})`;
+              ctx.strokeStyle = `rgba(46, 204, 113, ${currentOpacityStroke})`;
+              ctx.lineWidth = 2; // Keep original line width (or animate it too if desired)
+
+              // Draw the expanding circle using adapted original code
+              ctx.beginPath();
+              ctx.arc(unit.x, unit.y, currentRadius, 0, Math.PI * 2);
+              if (currentOpacityFill > 0.01) ctx.fill();   // Only fill if visible
+              if (currentOpacityStroke > 0.01) ctx.stroke(); // Only stroke if visible
+
+              // Countdown the timer
+              unit.bounceAnimTimer--;
+              if (unit.bounceAnimTimer <= 0) {
+                  unit.bounceAnimActive = false; // Deactivate animation when timer finishes
+              }
+          }
+      });
+      ctx.restore(); // Restore context state
     updateScoreDisplay();
     askMathProblem();
      currentWave = 0; // Start before Wave 1
