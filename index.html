@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Math Defend</title>
+  <title>MathDefend</title>
   <style>
        /* Basic Reset & Body Layout */
     body {
@@ -225,9 +225,9 @@ const firebaseConfig = {
 
         <!-- Buttons Section -->
         <div id="controls">
-            <button onclick="spawnUnit('melee')">Spawn Melee (Cost: 10)</button>
-            <button onclick="spawnUnit('archer')">Spawn Archer (Cost: 15)</button>
-            <button onclick="spawnUnit('mage')">Spawn Mage (Cost: 30)</button>
+            <button onclick="spawnUnit('melee')">Spawn [M]elee (Cost: 10)</button>
+            <button onclick="spawnUnit('archer')">Spawn [A]rcher (Cost: 15)</button>
+            <button onclick="spawnUnit('mage')">Spawn Ma[G]e (Cost: 30)</button>
             <button id="upgradeCapButton" onclick="upgradeUnitCap()" style="background-color: gold;">
                 [U]pgrade Cap (<span id="capBefore">10</span> -> <span id="capAfter">15</span>) (Cost: <span id="capCost">75</span>)
             </button>
@@ -1498,6 +1498,8 @@ const firebaseConfig = {
             flashElement(document.getElementById('upgradeCapButton'), 'lightcoral', '#d4af37'); // Flash red, revert to gold
         }
     }
+
+	  window.upgradeUnitCap = upgradeUnitCap; // <-- ADD THIS LINE TEMPORARILY
     
      function updateWaveStatusDisplay(message) {
         const statusElement = document.getElementById('waveStatus');
