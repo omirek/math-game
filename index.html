@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>MathDefend</title>
+  <title>Math Defend</title>
   <style>
        /* Basic Reset & Body Layout */
     body {
@@ -62,16 +62,41 @@
         font-size: 16px; /* Keep bonus text normal size */
         margin-left: 5px !important;
      }
-    #answerInput {
-        display: block; /* Take full width */
-        width: 80%; /* Adjust width as needed */
-        margin: 10px auto; /* Center horizontally */
-        padding: 10px;
-        font-size: 22px; /* Larger input text */
-        text-align: center;
+      #answerInput {
+        display: block;       /* Keep as block */
+        width: 90%;           /* INCREASED: Make it wider (adjust % as needed) */
+        margin: 15px auto;    /* Keeps vertical margin & centers horizontally */
+        padding: 12px;        /* Adjust padding if needed */
+        font-size: 24px;      /* INCREASED: Slightly larger font */
+        text-align: center;   /* Keep text centered */
         box-sizing: border-box;
-        border: 1px solid #aaa;
-        border-radius: 4px;
+
+        /* --- START NEW STYLES --- */
+        border: none;                           /* Remove the default border */
+        border-bottom: 2px solid #aaa;       /* Add a subtle bottom border instead */
+        outline: none;                          /* Remove the focus outline */
+        background-color: #fdfdfd;           /* Slightly off-white background */
+        border-radius: 0;                       /* Remove rounding for a flatter look */
+
+        /* Hide spinner arrows for Webkit browsers (Chrome, Safari, Edge) */
+        -webkit-appearance: none;
+        margin: 15px auto; /* Re-declare margin just in case */ /* Re-added margin: auto for centering */
+
+        /* Hide spinner arrows for Firefox */
+        -moz-appearance: textfield;
+        /* --- END NEW STYLES --- */
+    }
+
+    /* Optional: Style on focus */
+    #answerInput:focus {
+        border-bottom-color: #3498db; /* Change bottom border color on focus */
+    }
+
+    /* Hide spinner arrows specifically (more robust for Webkit) */
+    #answerInput::-webkit-outer-spin-button,
+    #answerInput::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
     }
     #mathForm button[type="submit"] { /* Style the submit button */
         padding: 8px 25px;
