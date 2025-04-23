@@ -4,91 +4,150 @@
   <meta charset="UTF-8" />
   <title>MathDefend</title>
   <style>
-    body { margin: 0; overflow: hidden; font-family: sans-serif; }
-    canvas { background: #f0f0f0; display: block; margin: 0 auto; border: 1px solid #ccc; }
-    #controls { text-align: center; margin: 10px; }
-     #controls button { /* Target buttons specifically within the controls div */
-        margin: 0 5px;
-        padding: 8px 15px; /* Add padding: 8px top/bottom, 15px left/right */
-        cursor: pointer; /* Ensure cursor indicates clickability */
-        font-size: 14px; /* Optional: Adjust font size if needed */
-        border: 1px solid #aaa; /* Optional: Add a subtle border */
-        border-radius: 4px; /* Optional: Slightly rounded corners */
-        background-color: #e7e7e7; /* Optional: Default background */
+       /* Basic Reset & Body Layout */
+    body {
+        margin: 0;
+        overflow: hidden; /* Prevent scrollbars on body */
+        font-family: sans-serif;
+        display: flex; /* Use Flexbox for layout */
+        height: 100vh; /* Full viewport height */
+        background-color: #f0f0f0; /* Background for area outside canvas */
     }
-    /* Style the upgrade button slightly differently if desired */
-    #upgradeCapButton {
-        background-color: #d4af37; /* Keep its gold color */
-        color: black;
-        border-color: #b89b32; /* Darker gold border */
+
+    /* Sidebar Styling */
+    #sidebar {
+        width: 280px; /* Width of the sidebar */
+        padding: 15px;
+        background-color: #e8e8e8;
+        border-right: 2px solid #ccc;
+        display: flex;
+        flex-direction: column; /* Stack elements vertically */
+        height: 100vh; /* Full height */
+        box-sizing: border-box; /* Include padding in width/height */
+        overflow-y: auto; /* Add scroll if content overflows */
     }
-    /* Optional: Add hover/active states for better feedback */
-    #controls button:hover {
-        background-color: #dcdcdc;
-    }
-    #upgradeCapButton:hover {
-         background-color: #c8a432;
-    }
-     #controls button:active {
-         background-color: #c0c0c0;
-         transform: translateY(1px); /* Slight press effect */
-     }
-     #upgradeCapButton:active {
-         background-color: #b89b32;
-         transform: translateY(1px);
-     }
-    #scoreDisplay { text-align: center; margin: 10px; font-size: 16px; }
-    #mathProblem { text-align: center; margin: 10px; font-size: 18px; }
-    #gameOverScreen {
-      display: none; /* Keep this */
-      flex-direction: column; /* Stack items vertically */
-      justify-content: center; /* Center vertically */
-      align-items: center; /* Center horizontally */
-      position: fixed; /* Position relative to viewport */
-      top: 0;          /* Align to top */
-      left: 0;         /* Align to left */
-      width: 100vw;    /* Full viewport width */
-      height: 100vh;   /* Full viewport height */
-      background-color: rgba(0, 0, 0, 0.85); /* Slightly darker? */
-      color: white;
-      font-size: 24px; /* Adjust base font size if needed */
-      text-align: center; /* Center text within elements */
-      /* padding-top: 0; */ /* Remove fixed padding-top if you had it */
-      padding: 20px; /* Add some general padding */
-      z-index: 10;
-      box-sizing: border-box; /* Include padding in width/height */
-      overflow-y: auto; /* Add scrollbar ONLY if content overflows */
-    }
-    /* Adjust heading/paragraph margins if needed */
-    #gameOverScreen h2 {
-        margin-top: 0;
+
+    /* Info Panel Styling */
+    #infoPanel {
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 15px;
         margin-bottom: 15px;
-        font-size: 36px;
+        text-align: center;
     }
-     #gameOverScreen p {
-        margin: 10px 0;
+    #waveStatus {
+        margin-bottom: 10px;
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+    }
+    #scoreDisplay, #unitCountDisplay {
+        font-size: 16px;
+        margin-bottom: 5px;
+    }
+
+    /* Solving Panel Styling */
+    #solvingPanel {
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 20px;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+    #mathForm span:first-child { /* Target the "X op Y = ?" part */
+        display: block; /* Make it take its own line */
+        font-size: 24px; /* Larger math problem */
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+     #mathForm span + span { /* Target the Bonus span */
+        font-size: 16px; /* Keep bonus text normal size */
+        margin-left: 5px !important;
      }
-     #highScoreListContainer {
-         max-width: 400px; /* Limit width of score list */
-         width: 90%;
-         margin-top: 20px;
-         text-align: left; /* Align list text left */
-         border: 1px solid #555; /* Optional border */
-         padding: 15px;
-         background-color: rgba(20, 20, 20, 0.5); /* Slight background */
-         border-radius: 5px;
+    #answerInput {
+        display: block; /* Take full width */
+        width: 80%; /* Adjust width as needed */
+        margin: 10px auto; /* Center horizontally */
+        padding: 10px;
+        font-size: 22px; /* Larger input text */
+        text-align: center;
+        box-sizing: border-box;
+        border: 1px solid #aaa;
+        border-radius: 4px;
+    }
+    #mathForm button[type="submit"] { /* Style the submit button */
+        padding: 8px 25px;
+        font-size: 16px;
+        cursor: pointer;
+        margin-top: 5px;
+    }
+
+
+    /* Controls Panel Styling */
+    #controls {
+        display: flex;
+        flex-direction: column; /* Stack buttons vertically */
+        gap: 10px; /* Space between buttons */
+    }
+    #controls button {
+        padding: 12px 5px; /* More padding vertically */
+        font-size: 14px;
+        cursor: pointer;
+        border: 1px solid #aaa;
+        background-color: #f9f9f9;
+        border-radius: 4px;
+        text-align: center;
+    }
+     #controls button:hover {
+         background-color: #eee;
      }
-      #highScoreListContainer h3 {
-          margin-top: 0;
-          text-align: center; /* Center the "High Scores:" heading */
-      }
-      #highScoreListContainer ol {
-          padding-left: 25px; /* Indent numbers slightly */
-          margin-bottom: 0;
-      }
-      #highScoreListContainer li {
-          margin-bottom: 5px; /* Space between entries */
-      }
+     #upgradeCapButton { /* Keep gold style */
+         background-color: gold !important;
+         font-weight: bold;
+     }
+     #upgradeCapButton:hover {
+         background-color: #e6c300 !important;
+     }
+
+
+    /* Canvas Styling */
+    canvas#gameCanvas {
+        display: block; /* Remove extra space below */
+        background: #f0f0f0;
+        /* Flex grow takes remaining space, but width/height attributes take precedence */
+        /* We control size via attributes mainly */
+        /* Remove auto margins if they existed */
+        /* Add border if desired */
+        border-left: 2px solid #ccc; /* Optional: border between sidebar and canvas */
+    }
+
+    /* Game Over Screen Styling */
+    #gameOverScreen {
+      display: none; /* Start hidden */
+      /* Flex properties for centering (keep from previous fix) */
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      /* Full screen overlay (keep from previous fix) */
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.85);
+      color: white;
+      font-size: 24px;
+      text-align: center;
+      padding: 20px;
+      z-index: 10;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+    /* Styles for children of gameOverScreen (keep from previous fix) */
+    #gameOverScreen h2 { margin-top: 0; margin-bottom: 15px; font-size: 36px; }
+    #gameOverScreen p { margin: 10px 0; }
+    #highScoreListContainer { max-width: 400px; width: 90%; margin-top: 20px; text-align: left; border: 1px solid #555; padding: 15px; background-color: rgba(20, 20, 20, 0.5); border-radius: 5px; }
+    #highScoreListContainer h3 { margin-top: 0; text-align: center; }
+    #highScoreListContainer ol { padding-left: 25px; margin-bottom: 0; }
+    #highScoreListContainer li { margin-bottom: 5px; }
   </style>
    <!-- Firebase v9+ Modular SDK -->
     <!-- Core App Module (You already have this) -->
@@ -119,23 +178,44 @@ const firebaseConfig = {
     <script type="module" src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js"></script>
 	    
 </head>
-<body>
-  <div id="controls">
-    <button onclick="spawnUnit('melee')">Spawn [M]elee (Cost: 10)</button>
-    <button onclick="spawnUnit('archer')">Spawn [A]rcher (Cost: 15)</button>
-    <button onclick="spawnUnit('mage')">Spawn Ma[G]e (Cost: 50)</button>
-    <button id="upgradeCapButton" onclick="upgradeArmyCap()" style="margin-left: 20px; background-color: #d4af37; color: black;">
-      [U]pgrade Cap (15 -> 20) (Cost: 75)
-    </button>
-  </div>
-  <div id="scoreDisplay">🪙 Gold: <span id="score">0</span>     📈 Score: <span id="mathScore">0</span></div>
-	 <div id="waveStatus" style="text-align: center; margin: 5px; font-size: 18px; font-weight: bold; color: #333;">Game Starting...</div>
-       <div id="armyCountDisplay" style="text-align: center; margin: 5px; font-size: 16px; color: #555;">
-    Units: 0 / 15
-  </div>
-  <div id="mathProblem"></div>
-  <canvas id="gameCanvas" width="800" height="500"></canvas>
-  <div id="gameOverScreen">Game Over!<br/><span>Final Score: 0</span></div>
+ <!-- START SIDEBAR -->
+    <div id="sidebar">
+
+        <!-- Info Section -->
+        <div id="infoPanel">
+            <div id="waveStatus">Game Starting...</div>
+            <div id="scoreDisplay">
+                🪙 Gold: <span id="score">0</span>   
+                📈 Score: <span id="mathScore">0</span>
+            </div>
+            <div id="unitCountDisplay">Units: <span id="currentUnits">0</span> / <span id="unitCap">10</span></div>
+        </div>
+
+        <!-- Solving Section -->
+        <div id="solvingPanel"> <!-- Renamed from mathProblem for clarity -->
+             <form id="mathForm">
+                 <!-- Content generated by JS -->
+            </form>
+        </div>
+
+        <!-- Buttons Section -->
+        <div id="controls">
+            <button onclick="spawnUnit('melee')">Spawn Melee (Cost: 10)</button>
+            <button onclick="spawnUnit('archer')">Spawn Archer (Cost: 15)</button>
+            <button onclick="spawnUnit('mage')">Spawn Mage (Cost: 30)</button>
+            <button id="upgradeCapButton" onclick="upgradeUnitCap()" style="background-color: gold;">
+                [U]pgrade Cap (<span id="capBefore">10</span> -> <span id="capAfter">15</span>) (Cost: <span id="capCost">75</span>)
+            </button>
+        </div>
+
+    </div>
+    <!-- END SIDEBAR -->
+
+    <!-- GAME CANVAS -->
+    <canvas id="gameCanvas" width="800" height="500"></canvas> <!-- Adjust width/height if needed -->
+
+    <!-- GAME OVER SCREEN (remains outside sidebar) -->
+    <div id="gameOverScreen">Game Over!<br/><span>Final Score: 0</span></div>
 
   <script type="module">	
      // --- START FIREBASE V9+ SETUP ---
