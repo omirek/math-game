@@ -633,6 +633,7 @@ const firebaseConfig = {
                     targetDX = 0; targetDY = 0; // Stop moving for this frame
                     // Normal logic will apply next frame
                 } else {
+		    this.manaChargeAnimTimer = (this.manaChargeAnimTimer + 1) % this.manaChargeAnimDuration;
                     // B. STILL Waiting: Mana is not full. Determine movement based on threats.
                     let fleeTarget = null;
                     let closestEnemyDist = Infinity;
@@ -873,6 +874,11 @@ const firebaseConfig = {
         this.shockwaveTimer = 0; // Counts down animation frames
         this.shockwaveDuration = 30; // Duration in frames (e.g., 0.5 seconds at 60fps)
         this.shockwaveMaxRadius = this.bounceEffectRange; // Expand out to the effect range
+
+	this.manaChargeAnimTimer = 0; // Timer cycles continuously for pulsing effect
+        this.manaChargeAnimDuration = 60; // Duration of one pulse cycle in frames (e.g., 1 second)
+        this.manaChargeMaxRadius = this.radius * 1.8; // Max size of the blue pulse (smaller than bounce)
+        this.manaChargeBaseOpacity = 0.5; // Base opacity for the blue pulse
 
 	this.maxMana = 100;
         this.currentMana = this.maxMana; // Start full
@@ -1725,6 +1731,41 @@ const firebaseConfig = {
       });
       ctx.restore();
       // --- End Draw Active Shockwaves ---
+
+	 // --- START ADDITION: Draw Mana Charge Pulse ---
+        ctx.save();
+        units.forEach(unit => {
+            // Draw ONLY if it's a Mage AND it's currently in the 'waiting for mana' state
+            if (unit instanceof Mage && unit.isFleeingOOM) {
+                // Calculate pulsing effect using sine wave based on the cycling timer
+                // progress goes 0 -> 1 over the duration
+                const progress = unit.manaChargeAnimTimer / unit.manaChargeAnimDuration;
+                // angle goes 0 -> 2*PI
+                const angle = progress * Math.PI * 2;
+                // pulseFactor goes 0 -> 1 -> 0 using sine shifted -PI/2
+                const pulseFactor = (Math.sin(angle - Math.PI / 2) + 1) / 2;
+
+                // Calculate current radius based on pulse (e.g., radius * 0.5 up to maxRadius)
+                const currentRadius = (unit.radius * 0.5) + (unit.manaChargeMaxRadius - unit.radius * 0.5) * pulseFactor;
+
+                // Calculate current opacity based on pulse
+                const currentOpacity = unit.manaChargeBaseOpacity * pulseFactor;
+
+                // Set drawing style (Blue, pulsing opacity)
+                ctx.fillStyle = `rgba(52, 152, 219, ${currentOpacity})`; // Blue color (adjust RGB as desired)
+
+                // Draw the pulsing circle (filled, no stroke)
+                ctx.beginPath();
+                ctx.arc(unit.x, unit.y, currentRadius, 0, Math.PI * 2);
+                // Only draw if slightly visible
+                if (currentOpacity > 0.05 && currentRadius > 1) {
+                    ctx.fill();
+                }
+            }
+        });
+        ctx.restore();
+        // --- END ADDITION ---
+	    
        // Check for castle destruction (redundant check, but safe)
        if (castle.hp <= 0) {
            gameOver();
