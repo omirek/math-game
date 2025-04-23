@@ -610,70 +610,97 @@ const firebaseConfig = {
             } else {
                 targetDX = 0; targetDY = 0; // No target, stand still
             }
-               } else if (this.type === 'mage') {
+                      } else if (this.type === 'mage') {
             // --- Mage Logic ---
             // NOTE: Core state updates (mana regen, cooldowns) happen at the start of Unit.update
 
-            const isLowOnMana = this.currentMana < this.lowManaThreshold;
-            let fleeTarget = null; // The enemy to flee from
+            let fleeTarget = null; // The specific enemy to flee from this frame
 
-            // 1. Determine if fleeing is needed (Low Mana AND Nearby Enemy)
-            if (isLowOnMana) {
-                let closestEnemyDist = Infinity;
-                const fleeCheckRadius = 100; // How close enemy needs to be to trigger flee
-                this.target = null; // Clear target when fleeing OOM
+            // 1. Check if we are currently in the OOM Flee state
+            if (this.isFleeingOOM) {
+                // If fleeing, check if mana is full now
+                if (this.currentMana >= this.maxMana) {
+                    // Mana fully restored! Stop fleeing state. Normal logic will resume next frame.
+                    this.isFleeingOOM = false;
+                    // console.log(`Mage (${this.x.toFixed(0)}, ${this.y.toFixed(0)}) finished fleeing OOM.`); // Optional Debug
+                    // targetDX/DY remain 0 for this frame, stand still unless separating
+                } else {
+                    // Still fleeing: Find the nearest threat *now* to flee from
+                    let closestEnemyDist = Infinity;
+                    const fleeCheckRadius = 120; // Increased check radius while actively fleeing?
+                    for (const enemy of enemies) {
+                        if (enemy.hp <= 0) continue;
+                        const d = this.distanceTo(enemy);
+                        if (d < fleeCheckRadius && d < closestEnemyDist) {
+                            closestEnemyDist = d;
+                            fleeTarget = enemy;
+                        }
+                    }
+                    // If a threat is found, calculate flee vector
+                    if (fleeTarget) {
+                        const dx = this.x - fleeTarget.x;
+                        const dy = this.y - fleeTarget.y;
+                        const fleeDist = Math.hypot(dx, dy);
+                        if (fleeDist > 0) { targetDX = (dx / fleeDist); targetDY = (dy / fleeDist); }
+                        else { targetDX = (Math.random() - 0.5); targetDY = (Math.random() - 0.5); }
+                    }
+                    // Else: No nearby enemy while fleeing OOM, stand still (targetDX/DY = 0)
+                }
+                // IMPORTANT: Do NOT attempt actions (heal/bounce/move-to-heal) while isFleeingOOM is true
 
-                for (const enemy of enemies) {
-                    if (enemy.hp <= 0) continue;
-                    const d = this.distanceTo(enemy);
-                    if (d < fleeCheckRadius && d < closestEnemyDist) {
-                        closestEnemyDist = d;
-                        fleeTarget = enemy; // Found the closest enemy to flee from
+            } else {
+                // --- Not Currently Fleeing OOM ---
+
+                // 2. Check if we SHOULD START fleeing (Low Mana AND Enemy Nearby)
+                const isLowOnMana = this.currentMana < this.lowManaThreshold;
+                if (isLowOnMana) {
+                    let closestEnemyDist = Infinity;
+                    const fleeCheckRadius = 100; // Initial radius to trigger fleeing
+                    for (const enemy of enemies) {
+                        if (enemy.hp <= 0) continue;
+                        const d = this.distanceTo(enemy);
+                        if (d < fleeCheckRadius && d < closestEnemyDist) {
+                            closestEnemyDist = d;
+                            fleeTarget = enemy; // Found enemy that triggers flee state
+                        }
+                    }
+
+                    if (fleeTarget) {
+                        // START FLEEING: Set the state and calculate initial flee vector
+                        this.isFleeingOOM = true;
+                        this.target = null; // Clear any target
+                        // console.log(`Mage (${this.x.toFixed(0)}, ${this.y.toFixed(0)}) STARTED fleeing OOM.`); // Optional Debug
+                        const dx = this.x - fleeTarget.x;
+                        const dy = this.y - fleeTarget.y;
+                        const fleeDist = Math.hypot(dx, dy);
+                        if (fleeDist > 0) { targetDX = (dx / fleeDist); targetDY = (dy / fleeDist); }
+                        else { targetDX = (Math.random() - 0.5); targetDY = (Math.random() - 0.5); }
+                        // Skip normal actions below because we just started fleeing
                     }
                 }
-            } else {
-                 // If not low on mana, find potential target for bounce trigger check later
-                 this.target = this.findNearest(enemies);
-            }
 
+                // 3. If we didn't just start fleeing, perform Normal Actions
+                if (!this.isFleeingOOM) { // Check again, might have just been set true
+                    // Find target for bounce check
+                    this.target = this.findNearest(enemies);
 
-            // 2. Set Movement Vector (targetDX/DY) based on state
-            if (fleeTarget) {
-                // --- ACTION: Fleeing (Low Mana & Enemy Nearby) ---
-                // Calculate flee vector directly away from fleeTarget (like Archer)
-                const dx = this.x - fleeTarget.x;
-                const dy = this.y - fleeTarget.y;
-                const fleeDist = Math.hypot(dx, dy);
-                if (fleeDist > 0) {
-                    targetDX = (dx / fleeDist); // Set target movement to flee direction
-                    targetDY = (dy / fleeDist);
-                } else { // If somehow exactly on top, jitter slightly
-                    targetDX = (Math.random() - 0.5);
-                    targetDY = (Math.random() - 0.5);
-                }
-                // IMPORTANT: Do NOT attempt heal/bounce/move-to-heal actions while fleeing
-            } else {
-                // --- ACTION: Normal Operation (Not Fleeing OOM) ---
-                // Attempt abilities (they check mana/cooldown internally)
-                this.healNearbyUnits();
-                if (this.bounceCooldown <= 0) {
-                    // triggerBounceOff uses this.target (found earlier if mana was ok)
-                    this.triggerBounceOff();
-                }
-
-                // Determine movement goal if not currently being bounced
-                const isBouncing = (Math.abs(this.bounceVelX) > 0.01 || Math.abs(this.bounceVelY) > 0.01);
-                if (!isBouncing) {
-                    // Check if should move towards a healing target
-                    const moveGoal = this.findHealingTargetMovement();
-                    if (moveGoal) {
-                        targetDX = moveGoal.dx; // Set target movement to heal direction
-                        targetDY = moveGoal.dy;
+                    // Attempt abilities
+                    this.healNearbyUnits();
+                    if (this.bounceCooldown <= 0) {
+                        this.triggerBounceOff(); // Checks this.target
                     }
-                    // Else: targetDX/DY remain 0 (stand still unless separating)
+
+                    // Determine movement goal if not currently being bounced
+                    const isBouncing = (Math.abs(this.bounceVelX) > 0.01 || Math.abs(this.bounceVelY) > 0.01);
+                    if (!isBouncing) {
+                        const moveGoal = this.findHealingTargetMovement();
+                        if (moveGoal) {
+                            targetDX = moveGoal.dx;
+                            targetDY = moveGoal.dy;
+                        }
+                    }
                 }
-                // Else: If bouncing, let bounce velocity handle movement later
-            }
+            } // End of (!isFleeingOOM) block
         } // --- End Mage Logic Block ---
         // --- END CORRECTED STRUCTURE ---
 
@@ -845,7 +872,8 @@ const firebaseConfig = {
         this.range = 120; // Range for abilities, not direct attack
         this.maxHp = 50; // Mages might be slightly squishier
         this.hp = this.maxHp;
-
+	      
+        this.isFleeingOOM = false; // True if currently fleeing due to low mana
         this.healRate = 0.04; // HP per frame
         this.healRange = 40;
         this.bounceCooldownMax = 500; // 360 value is 3 seconds at 60fps
