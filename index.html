@@ -504,265 +504,216 @@ const firebaseConfig = {
         ctx.fillRect(barX, barY, barWidth * healthRatio, barHeight);
       }
 
-      update() {
+          update() {
+        // --- Initial Checks ---
         if (this.hp <= 0) {
             this.remove();
-            return; // Stop update if removed
+            return;
         }
-        if (this.cooldown > 0) this.cooldown--;
-
-        let targetDX = 0, targetDY = 0; // Desired movement based on target/fleeing/goal
-        let separationDX = 0, separationDY = 0; // Desired movement based on separation
-
-        // --- Find Target (if needed) ---
-        if (this.type === 'enemy') {
-             // Enemies prioritize player units, then castle
-             this.target = this.findNearest(units);
-        } else if (this.type !== 'mage') { // Melee, Archer find enemy targets
-             this.target = this.findNearest(enemies);
-        } else { // Mage finds enemy targets for bouncing, but primarily focuses on healing allies
-             this.target = this.findNearest(enemies); // Keep track for bounce trigger
+        if (this.cooldown > 0) {
+            this.cooldown--;
         }
 
-        // --- Calculate Target/Goal Movement Direction ---
+        // --- Mage Specific State Updates (Ran every frame for Mages) ---
+        if (this.type === 'mage') {
+            if (this.currentMana < this.maxMana) {
+                this.currentMana = Math.min(this.maxMana, this.currentMana + this.manaRegenRate);
+            }
+            if (this.bounceCooldown > 0) { this.bounceCooldown--; }
+            if (this.shockwaveActive) {
+                this.shockwaveTimer--;
+                if (this.shockwaveTimer <= 0) { this.shockwaveActive = false; }
+            }
+        }
+
+        // --- Determine Movement Intention (targetDX/DY) ---
+        let targetDX = 0;
+        let targetDY = 0;
+        let separationDX = 0;
+        let separationDY = 0;
+
+        // --- Find Target (Relevant for most types) ---
+        // Find relevant target first
         if (this.type === 'enemy') {
+            this.target = this.findNearest(units); // Target player units
+        } else if (this.type === 'melee' || this.type === 'archer') {
+            this.target = this.findNearest(enemies); // Target enemies
+        }
+        // Mage target is handled within its own logic block
+
+
+        // --- Calculate Target/Goal Movement Based on Type ---
+
+        if (this.type === 'enemy') {
+            // --- Enemy Logic ---
             const castleDist = this.distanceTo(castle);
             if (this.target) {
-                // Move towards or attack unit target
                 const dist = this.distanceTo(this.target);
                 if (dist <= this.range) {
-                    this.attack(this.target); // Attack unit
+                    this.attack(this.target);
+                    targetDX = 0; targetDY = 0; // Stop moving when attacking
                 } else {
                     const dx = this.target.x - this.x;
                     const dy = this.target.y - this.y;
                     const targetDist = Math.hypot(dx, dy);
-                    if (targetDist > 0) {
-                        targetDX = (dx / targetDist);
-                        targetDY = (dy / targetDist);
-                    }
+                    if (targetDist > 0) { targetDX = (dx / targetDist); targetDY = (dy / targetDist); }
                 }
             } else if (castleDist <= this.range + castle.width / 2) {
-                // Attack castle if in range and no unit target
-                 if (castle.hp > 0) {
-                      castle.hp -= this.castleDamage;
-                      if (castle.hp <= 0) {
-                         gameOver();
-                         return; // Stop update if game over
-                      }
-                 }
+                if (castle.hp > 0) {
+                    castle.hp -= this.castleDamage;
+                    if (castle.hp <= 0) { gameOver(); return; }
+                }
+                targetDX = 0; targetDY = 0; // Stop moving
             } else {
-                 // Move towards castle if no unit target and not in range
                 const dx = castle.x - this.x;
-                // Aim slightly higher than castle base to avoid getting stuck under
                 const dy = (castle.y - castle.height / 2 + this.radius) - this.y;
                 const dist = Math.hypot(dx, dy);
-                if (dist > 0) {
-                    targetDX = (dx / dist);
-                    targetDY = (dy / dist);
-                }
+                if (dist > 0) { targetDX = (dx / dist); targetDY = (dy / dist); }
             }
-        } else { // Player units (melee, archer, mage)
-             if (this.target && (this.type === 'melee' || this.type === 'archer')) {
+        // --- CORRECTED STRUCTURE FOR PLAYER UNITS ---
+        } else if (this.type === 'melee') {
+            // --- Melee Logic ---
+            if (this.target) {
+                const dist = this.distanceTo(this.target);
+                if (dist <= this.range) {
+                    this.attack(this.target);
+                    targetDX = 0; targetDY = 0;
+                } else {
+                    const dx = this.target.x - this.x;
+                    const dy = this.target.y - this.y;
+                    const targetDist = Math.hypot(dx, dy);
+                    if (targetDist > 0) { targetDX = (dx / targetDist); targetDY = (dy / targetDist); }
+                }
+            } else {
+                targetDX = 0; targetDY = 0; // No target, stand still
+            }
+        } else if (this.type === 'archer') {
+            // --- Archer Logic ---
+             if (this.target) {
                  const dist = this.distanceTo(this.target);
-
-                 if (this.type === 'archer') {
-                     const idealDist = this.range * 0.8; // Try to stay at 80% of max range
-                     if (dist < idealDist) { // Flee if too close
-                         const dx = this.x - this.target.x;
-                         const dy = this.y - this.target.y;
-                         const fleeDist = Math.hypot(dx, dy);
-                         if (fleeDist > 0) {
-                             targetDX = (dx / fleeDist);
-                             targetDY = (dy / fleeDist);
-                         }
-                         if (dist <= this.range) this.shoot(this.target); // Shoot even if fleeing
-                     } else if (dist <= this.range) { // Shoot if in range but not too close
-                         this.shoot(this.target);
-                         // Stay put while shooting (targetDX/DY remain 0)
-                     } else { // Move towards if too far
-                         const dx = this.target.x - this.x;
-                         const dy = this.target.y - this.y;
-                         const targetDist = Math.hypot(dx, dy);
-                         if (targetDist > 0) {
-                             targetDX = (dx / targetDist);
-                             targetDY = (dy / targetDist);
-                         }
-                     }
-                 } else if (this.type === 'melee') {
-                     if (dist <= this.range) {
-                         this.attack(this.target);
-                         // Stay put while attacking
-                     } else { // Move towards target
-                         const dx = this.target.x - this.x;
-                         const dy = this.target.y - this.y;
-                         const targetDist = Math.hypot(dx, dy);
-                         if (targetDist > 0) {
-                             targetDX = (dx / targetDist);
-                             targetDY = (dy / targetDist);
-                         }
-                     }
-                         } else if (this.type === 'mage') {
-                 // --- START MANA-BASED MOVEMENT & LOGIC ---
-                 const isLowOnMana = this.currentMana < this.lowManaThreshold;
-                 let fleeTarget = null; // The enemy to flee from if OOM
-
-                 // Check if low on mana and enemies are nearby
-                 if (isLowOnMana) {
-                     let closestEnemyDist = Infinity;
-                     // Define how close an enemy must be to trigger fleeing when OOM
-                     const fleeCheckRadius = 100; // Adjust as needed
-
-                     // Find the closest enemy within the flee radius
-                     for (const enemy of enemies) {
-                         if (enemy.hp <= 0) continue; // Ignore dead enemies
-                         const d = this.distanceTo(enemy);
-                         if (d < fleeCheckRadius && d < closestEnemyDist) {
-                             closestEnemyDist = d;
-                             fleeTarget = enemy;
-                         }
-                     }
-                 }
-
-                 // Determine Action based on Mana and Enemy Proximity
-                 if (isLowOnMana && fleeTarget) {
-                     // --- ACTION: Fleeing (Out Of Mana & Enemy Nearby) ---
-                     console.log(`Mage (${this.x.toFixed(0)}, ${this.y.toFixed(0)}) is low on mana and fleeing!`); // Optional Debug Log
-
-                     // Calculate direction directly away from the closest enemy
-                     const dx = this.x - fleeTarget.x;
-                     const dy = this.y - fleeTarget.y;
+                 const idealDist = this.range * 0.8;
+                 if (dist < idealDist) {
+                     const dx = this.x - this.target.x;
+                     const dy = this.y - this.target.y;
                      const fleeDist = Math.hypot(dx, dy);
-
-                     if (fleeDist > 0) {
-                         // Set target movement vector to the flee direction
-                         targetDX = (dx / fleeDist); // Normalized flee vector
-                         targetDY = (dy / fleeDist);
-                         // Optional: Increase speed while fleeing? Multiply by 1.5?
-                         // targetDX *= 1.5; targetDY *= 1.5;
-                     } else {
-                         // On top of enemy? Move randomly? Stand still?
-                         targetDX = (Math.random() - 0.5) * 0.5; // Slight random jitter
-                         targetDY = (Math.random() - 0.5) * 0.5;
-                     }
-
-                     // CRITICAL: When fleeing OOM, only regenerate mana. Don't try to heal/bounce.
-                     // Mana regen happens inside updateMageSpecifics, but we need to ensure
-                     // other parts of it (like bounce checks/healing) don't run.
-                     // Let's modify updateMageSpecifics slightly or just handle regen here.
-                     // --- Handling Regen directly here for clarity when fleeing ---
-                     if (this.currentMana < this.maxMana) {
-                         this.currentMana = Math.min(this.maxMana, this.currentMana + this.manaRegenRate);
-                     }
-                     if (this.bounceCooldown > 0) { // Bounce cooldown still ticks down
-                         this.bounceCooldown--;
-                     }
-                     if(this.shockwaveActive) { // Shockwave animation timer still ticks down
-                         this.shockwaveTimer--;
-                         if (this.shockwaveTimer <= 0) {
-                            this.shockwaveActive = false;
-                         }
-                     }
-                     // Do NOT call findHealingTargetMovement or triggerBounceOff
-
+                     if (fleeDist > 0) { targetDX = (dx / fleeDist); targetDY = (dy / fleeDist); }
+                     if (dist <= this.range) this.shoot(this.target);
+                 } else if (dist <= this.range) {
+                     this.shoot(this.target);
+                     targetDX = 0; targetDY = 0;
                  } else {
-                     // --- ACTION: Normal Behavior (Not Fleeing OOM) ---
-                     // Perform standard Mage updates: Healing check, Bounce check, Regen, Cooldowns
-                     this.updateMageSpecifics(); // Contains heal, bounce checks/cooldowns, regen
-
-                     // Determine movement goal (only if not fleeing/bouncing)
-                     // Check if bouncing - bounce movement handled later, don't try to move normally
-                     const isBouncing = (Math.abs(this.bounceVelX) > 0.01 || Math.abs(this.bounceVelY) > 0.01);
-
-                     if (!isBouncing) {
-                          // If not bouncing, check if we should move towards a healing target
-                          const moveGoal = this.findHealingTargetMovement();
-                          if (moveGoal) {
-                              targetDX = moveGoal.dx;
-                              targetDY = moveGoal.dy;
-                          }
-                          // Else: If no healing goal, targetDX/DY remain 0 (stand still unless separating)
-                     }
-                      // Else: If bouncing, targetDX/DY remain 0, bounce velocity handles movement later
+                     const dx = this.target.x - this.x;
+                     const dy = this.target.y - this.y;
+                     const targetDist = Math.hypot(dx, dy);
+                     if (targetDist > 0) { targetDX = (dx / targetDist); targetDY = (dy / targetDist); }
                  }
-                 // --- END MANA-BASED MOVEMENT & LOGIC ---
-             } // End Mage logic block
-             // If no target, player units currently stand still (unless mage moves to heal)
-        }
+            } else {
+                targetDX = 0; targetDY = 0; // No target, stand still
+            }
+        } else if (this.type === 'mage') {
+            // --- Mage Logic ---
+            const isLowOnMana = this.currentMana < this.lowManaThreshold;
+            let fleeTarget = null;
+
+            if (isLowOnMana) {
+                let closestEnemyDist = Infinity;
+                const fleeCheckRadius = 100;
+                this.target = null; // Clear potential enemy target if fleeing OOM
+                for (const enemy of enemies) {
+                    if (enemy.hp <= 0) continue;
+                    const d = this.distanceTo(enemy);
+                    if (d < fleeCheckRadius && d < closestEnemyDist) {
+                        closestEnemyDist = d;
+                        fleeTarget = enemy;
+                    }
+                }
+            } else {
+                 // Find enemy target only if NOT low on mana (needed for bounce trigger check)
+                 this.target = this.findNearest(enemies);
+            }
+
+
+            if (fleeTarget) { // Fleeing takes priority
+                const dx = this.x - fleeTarget.x;
+                const dy = this.y - fleeTarget.y;
+                const fleeDist = Math.hypot(dx, dy);
+                if (fleeDist > 0) { targetDX = (dx / fleeDist); targetDY = (dy / fleeDist); }
+                 else { targetDX = (Math.random() - 0.5) * 0.5; targetDY = (Math.random() - 0.5) * 0.5; }
+                // State updates (mana regen, cooldowns) already handled at the top
+            } else { // Not fleeing OOM
+                // Try Heal/Bounce (checks mana/cooldown internally or via trigger)
+                this.healNearbyUnits();
+                if (this.bounceCooldown <= 0) {
+                    // Need enemy target info for triggerBounceOff
+                    // Re-find target here if not already found (when mana sufficient)
+                    if (!this.target && !isLowOnMana) { // Added !isLowOnMana check
+                         this.target = this.findNearest(enemies);
+                    }
+                    this.triggerBounceOff(); // triggerBounceOff checks this.target
+                }
+
+                // Determine movement if not bouncing
+                 const isBouncing = (Math.abs(this.bounceVelX) > 0.01 || Math.abs(this.bounceVelY) > 0.01);
+                 if (!isBouncing) {
+                      const moveGoal = this.findHealingTargetMovement();
+                      if (moveGoal) {
+                          targetDX = moveGoal.dx;
+                          targetDY = moveGoal.dy;
+                      } // Else: Stand still if no heal goal
+                 } // Else: If bouncing, targetDX/DY remain 0
+            }
+        } // End Mage Block
+        // --- END CORRECTED STRUCTURE ---
 
         // --- Calculate Separation Force ---
-        // Consider both allies and enemies for separation
+        // (This part remains the same)
         const nearbyUnits = (this.type === 'enemy' ? [...units, ...enemies] : [...units, ...enemies]);
         for (const other of nearbyUnits) {
-          if (other === this || other.hp <= 0) continue; // Don't separate from self or dead units
-
-          const dist = this.distanceTo(other);
-
-          if (dist > 0 && dist < SEPARATION_DISTANCE) {
-            const pushX = this.x - other.x;
-            const pushY = this.y - other.y;
-            // No need for hypot again, dist is the magnitude
-            // Apply stronger force when closer
-            const strength = SEPARATION_STRENGTH * (1 - dist / SEPARATION_DISTANCE);
-            separationDX += (pushX / dist) * strength;
-            separationDY += (pushY / dist) * strength;
-          }
+            if (other === this || other.hp <= 0) continue;
+            const dist = this.distanceTo(other);
+            if (dist > 0 && dist < SEPARATION_DISTANCE) {
+                const pushX = this.x - other.x;
+                const pushY = this.y - other.y;
+                const strength = SEPARATION_STRENGTH * (1 - dist / SEPARATION_DISTANCE);
+                separationDX += (pushX / dist) * strength;
+                separationDY += (pushY / dist) * strength;
+            }
         }
 
-                // --- START REFINED MOVEMENT LOGIC (Replaces Combine/Apply Section) ---
-
-        let isBouncing = false;
+        // --- Apply Movement Logic ---
+        // (This part remains the same - handles bounce vs normal movement)
+        let isBouncing = (Math.abs(this.bounceVelX) > 0.01 || Math.abs(this.bounceVelY) > 0.01);
         let moveX = 0;
         let moveY = 0;
 
-        // --- Apply Bounce Velocity & Decay FIRST ---
-        // Check if there's significant bounce velocity remaining
-        if (Math.abs(this.bounceVelX) > 0.01 || Math.abs(this.bounceVelY) > 0.01) {
-            isBouncing = true; // Mark the unit as actively bouncing this frame
-
-            // Apply decay to the current bounce velocity *before* using it
+        if (isBouncing) {
             this.bounceVelX *= this.bounceDecay;
             this.bounceVelY *= this.bounceDecay;
-
-            // The movement for this frame is determined by the (decayed) bounce velocity
             moveX = this.bounceVelX;
             moveY = this.bounceVelY;
-
-            // If velocity becomes negligible after decay, stop the bounce effect fully for next frame
             if (Math.hypot(this.bounceVelX, this.bounceVelY) < 0.1) {
                 this.bounceVelX = 0;
                 this.bounceVelY = 0;
-                // isBouncing remains true for *this frame*, but will be false next frame
             }
         }
 
-        // --- Apply Normal Movement ONLY IF NOT Currently Bouncing ---
         if (!isBouncing) {
-            // Calculate the combined vector from target desire + separation force
             const normalDX = targetDX + separationDX;
             const normalDY = targetDY + separationDY;
             const normalDist = Math.hypot(normalDX, normalDY);
-
-            // If there's any normal movement direction
             if (normalDist > 0) {
-                // Calculate movement based on the normal direction, scaled by the unit's speed
-                moveX = (normalDX / normalDist) * this.speed;
-                moveY = (normalDY / normalDist) * this.speed;
+                moveX += (normalDX / normalDist) * this.speed;
+                moveY += (normalDY / normalDist) * this.speed;
             }
-            // Else: If no target/separation force, moveX/moveY remain 0 (unit stands still)
         }
-        // Else: If isBouncing was true, moveX/moveY were already set by the bounce velocity above,
-        // and we intentionally skip applying normal movement.
 
-        // --- Apply the final calculated movement (either bounce OR normal) ---
         this.x += moveX;
         this.y += moveY;
 
-        // --- END REFINED MOVEMENT LOGIC ---
-
-        // --- Post-Movement Actions --- // This part should remain
+        // --- Post-Movement Actions ---
         this.enforceBounds();
-      } // End of update()
-      }
+
+    } // End of update() method - Ensure this brace matches the 'update() {' at the start
 	    
       findNearest(targets) {
         let minDist = Infinity;
