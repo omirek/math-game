@@ -894,7 +894,7 @@ const firebaseConfig = {
 
         this.bounceManaCost = 35; // Cost to perform bounce
         this.healManaCost = 0.8; // Cost per successful heal tick applied
-        this.lowManaThreshold = this.bounceManaCost; // Flee if mana is below this
+        this.lowManaThreshold = this.healManaCost; // Flee if mana is below this
       }
 
       // Called BY the base Unit.update() method specifically for mages
