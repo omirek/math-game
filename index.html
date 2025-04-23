@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>MathDefend</title>
+  <title>Math Defend</title>
   <style>
     body { margin: 0; overflow: hidden; font-family: sans-serif; }
     canvas { background: #f0f0f0; display: block; margin: 0 auto; border: 1px solid #ccc; }
@@ -233,8 +233,8 @@ const firebaseConfig = {
       y: canvas.height - 60, // Center Y of the castle structure base
       width: 120,
       height: 100,
-      maxHp: 10000,
-      hp: 10000
+      maxHp: 30000,
+      hp: 30000
     };
 
 	    // --- START ADDITION: Army Count Display Function ---
@@ -601,18 +601,91 @@ const firebaseConfig = {
                              targetDY = (dy / targetDist);
                          }
                      }
+                         } else if (this.type === 'mage') {
+                 // --- START MANA-BASED MOVEMENT & LOGIC ---
+                 const isLowOnMana = this.currentMana < this.lowManaThreshold;
+                 let fleeTarget = null; // The enemy to flee from if OOM
+
+                 // Check if low on mana and enemies are nearby
+                 if (isLowOnMana) {
+                     let closestEnemyDist = Infinity;
+                     // Define how close an enemy must be to trigger fleeing when OOM
+                     const fleeCheckRadius = 100; // Adjust as needed
+
+                     // Find the closest enemy within the flee radius
+                     for (const enemy of enemies) {
+                         if (enemy.hp <= 0) continue; // Ignore dead enemies
+                         const d = this.distanceTo(enemy);
+                         if (d < fleeCheckRadius && d < closestEnemyDist) {
+                             closestEnemyDist = d;
+                             fleeTarget = enemy;
+                         }
+                     }
                  }
-             } else if (this.type === 'mage') {
-                 // Mage specific logic is handled by its own methods called here
-                 this.updateMageSpecifics(); // Heal, check bounce trigger
-                 // Get mage's desired movement (towards damaged allies if no enemies nearby)
-                 const moveGoal = this.findHealingTargetMovement();
-                 if (moveGoal) {
-                     targetDX = moveGoal.dx;
-                     targetDY = moveGoal.dy;
+
+                 // Determine Action based on Mana and Enemy Proximity
+                 if (isLowOnMana && fleeTarget) {
+                     // --- ACTION: Fleeing (Out Of Mana & Enemy Nearby) ---
+                     console.log(`Mage (${this.x.toFixed(0)}, ${this.y.toFixed(0)}) is low on mana and fleeing!`); // Optional Debug Log
+
+                     // Calculate direction directly away from the closest enemy
+                     const dx = this.x - fleeTarget.x;
+                     const dy = this.y - fleeTarget.y;
+                     const fleeDist = Math.hypot(dx, dy);
+
+                     if (fleeDist > 0) {
+                         // Set target movement vector to the flee direction
+                         targetDX = (dx / fleeDist); // Normalized flee vector
+                         targetDY = (dy / fleeDist);
+                         // Optional: Increase speed while fleeing? Multiply by 1.5?
+                         // targetDX *= 1.5; targetDY *= 1.5;
+                     } else {
+                         // On top of enemy? Move randomly? Stand still?
+                         targetDX = (Math.random() - 0.5) * 0.5; // Slight random jitter
+                         targetDY = (Math.random() - 0.5) * 0.5;
+                     }
+
+                     // CRITICAL: When fleeing OOM, only regenerate mana. Don't try to heal/bounce.
+                     // Mana regen happens inside updateMageSpecifics, but we need to ensure
+                     // other parts of it (like bounce checks/healing) don't run.
+                     // Let's modify updateMageSpecifics slightly or just handle regen here.
+                     // --- Handling Regen directly here for clarity when fleeing ---
+                     if (this.currentMana < this.maxMana) {
+                         this.currentMana = Math.min(this.maxMana, this.currentMana + this.manaRegenRate);
+                     }
+                     if (this.bounceCooldown > 0) { // Bounce cooldown still ticks down
+                         this.bounceCooldown--;
+                     }
+                     if(this.shockwaveActive) { // Shockwave animation timer still ticks down
+                         this.shockwaveTimer--;
+                         if (this.shockwaveTimer <= 0) {
+                            this.shockwaveActive = false;
+                         }
+                     }
+                     // Do NOT call findHealingTargetMovement or triggerBounceOff
+
+                 } else {
+                     // --- ACTION: Normal Behavior (Not Fleeing OOM) ---
+                     // Perform standard Mage updates: Healing check, Bounce check, Regen, Cooldowns
+                     this.updateMageSpecifics(); // Contains heal, bounce checks/cooldowns, regen
+
+                     // Determine movement goal (only if not fleeing/bouncing)
+                     // Check if bouncing - bounce movement handled later, don't try to move normally
+                     const isBouncing = (Math.abs(this.bounceVelX) > 0.01 || Math.abs(this.bounceVelY) > 0.01);
+
+                     if (!isBouncing) {
+                          // If not bouncing, check if we should move towards a healing target
+                          const moveGoal = this.findHealingTargetMovement();
+                          if (moveGoal) {
+                              targetDX = moveGoal.dx;
+                              targetDY = moveGoal.dy;
+                          }
+                          // Else: If no healing goal, targetDX/DY remain 0 (stand still unless separating)
+                     }
+                      // Else: If bouncing, targetDX/DY remain 0, bounce velocity handles movement later
                  }
-                 // Note: Mage doesn't directly attack, but might trigger bounce which needs enemy target info.
-             }
+                 // --- END MANA-BASED MOVEMENT & LOGIC ---
+             } // End Mage logic block
              // If no target, player units currently stand still (unless mage moves to heal)
         }
 
@@ -818,10 +891,18 @@ const firebaseConfig = {
         this.bounceForce = 150; // How far enemies are pushed
 	this.bounceInitialSpeed = 9; // Adjust this value to control initial push speed
 
-	 this.shockwaveActive = false;
+	this.shockwaveActive = false;
         this.shockwaveTimer = 0; // Counts down animation frames
         this.shockwaveDuration = 30; // Duration in frames (e.g., 0.5 seconds at 60fps)
         this.shockwaveMaxRadius = this.bounceEffectRange; // Expand out to the effect range
+
+	this.maxMana = 100;
+        this.currentMana = this.maxMana; // Start full
+        this.manaRegenRate = 0.15; // Mana per frame (e.g., 0.15 * 60 = 9 mana/sec)
+
+        this.bounceManaCost = 35; // Cost to perform bounce
+        this.healManaCost = 0.8; // Cost per successful heal tick applied
+        this.lowManaThreshold = this.bounceManaCost; // Flee if mana is below this
       }
 
       // Called BY the base Unit.update() method specifically for mages
@@ -844,7 +925,11 @@ const firebaseConfig = {
                 }
             }
             // --- END MODIFICATION ---
-
+	    // --- START ADDITION: Mana Regeneration ---
+            if (this.currentMana < this.maxMana) {
+                 this.currentMana = Math.min(this.maxMana, this.currentMana + this.manaRegenRate);
+            }
+            // --- END ADDITION ---
             // Existing Mage logic (Healing and Bounce Cooldown)
             this.healNearbyUnits();
 
@@ -929,15 +1014,25 @@ const firebaseConfig = {
 
           // If a valid target was found within range based on score, heal only that target
           if (bestTarget) {
-              const oldHp = bestTarget.hp;
-              bestTarget.hp = Math.min(bestTarget.hp + this.healRate, bestTarget.maxHp);
+            // --- START MANA CHECK ---
+              // Check if we have enough mana *before* attempting to heal
+              if (this.currentMana >= this.healManaCost) {
+                   const oldHp = bestTarget.hp;
+                   bestTarget.hp = Math.min(bestTarget.hp + this.healRate, bestTarget.maxHp);
 
-              // Set the visual flag if healing occurred
-              if (bestTarget.hp > oldHp) {
-                 bestTarget.isBeingHealed = true;
-		 playSound(sndHealPulse); // Ensure this sound is short!
+                   if (bestTarget.hp > oldHp) {
+                       // Healing was successful, now subtract mana
+                       this.currentMana -= this.healManaCost; // Subtract cost
+                       bestTarget.isBeingHealed = true;
+                       playSound(sndHealPulse);
+                   }
+                   // Else: HP was already max, no mana cost, no sound/flag needed
+              } else {
+                  // Not enough mana to initiate heal tick (optional: play sound?)
+                  // playSound(sndNoMana); // Maybe too noisy if played every frame?
               }
-          }
+              // --- END MANA CHECK ---
+	  }
       }
 
       triggerBounceOff() {
@@ -956,7 +1051,15 @@ const firebaseConfig = {
       }
 
      performBounce() {
-            // --- START ADDITION: Trigger Shockwave ---
+	  // --- START MANA CHECK ---
+          if (this.currentMana < this.bounceManaCost) {
+              playSound(sndNoMana); // Play "fizzle" or "error" sound
+              return; // Not enough mana, do nothing else
+          }
+          // Sufficient mana, proceed:
+          this.currentMana -= this.bounceManaCost; // Subtract cost
+          // --- END MANA CHECK ---
+          // --- START ADDITION: Trigger Shockwave ---
           this.shockwaveActive = true;
           this.shockwaveTimer = this.shockwaveDuration;
           // --- DETAILED LOGGING ---
@@ -996,6 +1099,23 @@ const firebaseConfig = {
         shoot(target) { } // This is now correctly placed AFTER performBounce closes
         attack(target) { } // Mages don't melee attack
 
+	 draw() {
+          // 1. Call the base Unit's draw method to draw body and HP bar
+          super.draw(); // Executes Unit.prototype.draw()
+
+          // 2. Draw the Mana Bar below the HP bar
+          const manaRatio = Math.max(0, this.currentMana / this.maxMana);
+          const barWidth = this.radius * 2.5; // Same width as HP bar
+          const barHeight = 4;
+          const barX = this.x - barWidth / 2;
+          // Position it below the HP bar (HP bar is at y - radius - 8)
+          const barY = this.y - this.radius - 8 + barHeight + 2; // Add HP bar height + 2px gap
+
+          ctx.fillStyle = '#333'; // Background
+          ctx.fillRect(barX, barY, barWidth, barHeight);
+          ctx.fillStyle = '#3498db'; // Blue color for mana
+          ctx.fillRect(barX, barY, barWidth * manaRatio, barHeight);
+      }
     } // End of Mage Class
 
     // --- Projectile Class ---
