@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Math Defend</title>
+  <title>MathDefend</title>
   <style>
     body { margin: 0; overflow: hidden; font-family: sans-serif; }
     canvas { background: #f0f0f0; display: block; margin: 0 auto; border: 1px solid #ccc; }
@@ -233,8 +233,8 @@ const firebaseConfig = {
       y: canvas.height - 60, // Center Y of the castle structure base
       width: 120,
       height: 100,
-      maxHp: 1000,
-      hp: 1000
+      maxHp: 10000,
+      hp: 10000
     };
 
 	    // --- START ADDITION: Army Count Display Function ---
@@ -1031,7 +1031,7 @@ const firebaseConfig = {
 	  // --- ADD SOUND ---
      // Play hit sound only if damage was dealt
      if(this.target.hp < oldHp) {
-        playSound(sndArrowHit);
+        //playSound(sndArrowHit);
      }
      // --- END SOUND ---
           
