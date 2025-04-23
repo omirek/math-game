@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Math Defend</title>
+  <title>MathDefend</title>
   <style>
     body { margin: 0; overflow: hidden; font-family: sans-serif; }
     canvas { background: #f0f0f0; display: block; margin: 0 auto; border: 1px solid #ccc; }
@@ -610,59 +610,71 @@ const firebaseConfig = {
             } else {
                 targetDX = 0; targetDY = 0; // No target, stand still
             }
-        } else if (this.type === 'mage') {
+               } else if (this.type === 'mage') {
             // --- Mage Logic ---
-            const isLowOnMana = this.currentMana < this.lowManaThreshold;
-            let fleeTarget = null;
+            // NOTE: Core state updates (mana regen, cooldowns) happen at the start of Unit.update
 
+            const isLowOnMana = this.currentMana < this.lowManaThreshold;
+            let fleeTarget = null; // The enemy to flee from
+
+            // 1. Determine if fleeing is needed (Low Mana AND Nearby Enemy)
             if (isLowOnMana) {
                 let closestEnemyDist = Infinity;
-                const fleeCheckRadius = 100;
-                this.target = null; // Clear potential enemy target if fleeing OOM
+                const fleeCheckRadius = 100; // How close enemy needs to be to trigger flee
+                this.target = null; // Clear target when fleeing OOM
+
                 for (const enemy of enemies) {
                     if (enemy.hp <= 0) continue;
                     const d = this.distanceTo(enemy);
                     if (d < fleeCheckRadius && d < closestEnemyDist) {
                         closestEnemyDist = d;
-                        fleeTarget = enemy;
+                        fleeTarget = enemy; // Found the closest enemy to flee from
                     }
                 }
             } else {
-                 // Find enemy target only if NOT low on mana (needed for bounce trigger check)
+                 // If not low on mana, find potential target for bounce trigger check later
                  this.target = this.findNearest(enemies);
             }
 
 
-            if (fleeTarget) { // Fleeing takes priority
+            // 2. Set Movement Vector (targetDX/DY) based on state
+            if (fleeTarget) {
+                // --- ACTION: Fleeing (Low Mana & Enemy Nearby) ---
+                // Calculate flee vector directly away from fleeTarget (like Archer)
                 const dx = this.x - fleeTarget.x;
                 const dy = this.y - fleeTarget.y;
                 const fleeDist = Math.hypot(dx, dy);
-                if (fleeDist > 0) { targetDX = (dx / fleeDist); targetDY = (dy / fleeDist); }
-                 else { targetDX = (Math.random() - 0.5) * 0.5; targetDY = (Math.random() - 0.5) * 0.5; }
-                // State updates (mana regen, cooldowns) already handled at the top
-            } else { // Not fleeing OOM
-                // Try Heal/Bounce (checks mana/cooldown internally or via trigger)
+                if (fleeDist > 0) {
+                    targetDX = (dx / fleeDist); // Set target movement to flee direction
+                    targetDY = (dy / fleeDist);
+                } else { // If somehow exactly on top, jitter slightly
+                    targetDX = (Math.random() - 0.5);
+                    targetDY = (Math.random() - 0.5);
+                }
+                // IMPORTANT: Do NOT attempt heal/bounce/move-to-heal actions while fleeing
+            } else {
+                // --- ACTION: Normal Operation (Not Fleeing OOM) ---
+                // Attempt abilities (they check mana/cooldown internally)
                 this.healNearbyUnits();
                 if (this.bounceCooldown <= 0) {
-                    // Need enemy target info for triggerBounceOff
-                    // Re-find target here if not already found (when mana sufficient)
-                    if (!this.target && !isLowOnMana) { // Added !isLowOnMana check
-                         this.target = this.findNearest(enemies);
-                    }
-                    this.triggerBounceOff(); // triggerBounceOff checks this.target
+                    // triggerBounceOff uses this.target (found earlier if mana was ok)
+                    this.triggerBounceOff();
                 }
 
-                // Determine movement if not bouncing
-                 const isBouncing = (Math.abs(this.bounceVelX) > 0.01 || Math.abs(this.bounceVelY) > 0.01);
-                 if (!isBouncing) {
-                      const moveGoal = this.findHealingTargetMovement();
-                      if (moveGoal) {
-                          targetDX = moveGoal.dx;
-                          targetDY = moveGoal.dy;
-                      } // Else: Stand still if no heal goal
-                 } // Else: If bouncing, targetDX/DY remain 0
+                // Determine movement goal if not currently being bounced
+                const isBouncing = (Math.abs(this.bounceVelX) > 0.01 || Math.abs(this.bounceVelY) > 0.01);
+                if (!isBouncing) {
+                    // Check if should move towards a healing target
+                    const moveGoal = this.findHealingTargetMovement();
+                    if (moveGoal) {
+                        targetDX = moveGoal.dx; // Set target movement to heal direction
+                        targetDY = moveGoal.dy;
+                    }
+                    // Else: targetDX/DY remain 0 (stand still unless separating)
+                }
+                // Else: If bouncing, let bounce velocity handle movement later
             }
-        } // End Mage Block
+        } // --- End Mage Logic Block ---
         // --- END CORRECTED STRUCTURE ---
 
         // --- Calculate Separation Force ---
@@ -1005,7 +1017,7 @@ const firebaseConfig = {
      performBounce() {
 	  // --- START MANA CHECK ---
           if (this.currentMana < this.bounceManaCost) {
-              playSound(sndNoMana); // Play "fizzle" or "error" sound
+              //playSound(sndNoMana); // Play "fizzle" or "error" sound
               return; // Not enough mana, do nothing else
           }
           // Sufficient mana, proceed:
