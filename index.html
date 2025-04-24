@@ -491,17 +491,16 @@ const firebaseConfig = {
       currentOperands = [a, b];
       currentOperator = op;
 
-      // 3. Modify 'isHard' logic: Mark ALL division as hard for now
+           // 3. Determine if the problem is "Hard" (for displaying bonus text)
+      // Aligned with operations giving significant gold bonuses
       const isHard =
-           // Multiplication (unchanged)
-           (op === '*' && (a > 5 || b > 5) && a !== 1 && b !== 1 && a !== 10 && b !== 10) ||
-           // Addition (unchanged)
-           (op === '+' && a + b > 15) ||
-           // Subtraction (unchanged)
-           (op === '-' && a > 15) ||
-           // --- MODIFICATION: Division is always hard ---
-           (op === '/');
-           // --- END MODIFICATION ---
+           // Non-trivial Multiplication (excludes *1, *10)
+           (op === '*' && a !== 1 && b !== 1 && a !== 10 && b !== 10) ||
+           // Any Division
+           (op === '/') ||
+           // Subtraction with large first number (as previously defined)
+           (op === '-' && a > 15);
+           // Note: Large additions aren't marked "Hard" by default here, focus on operator bonus types
 
       // 4. Construct problem string and calculate answer
       const problemStr = `${a} ${op} ${b}`;
@@ -547,6 +546,7 @@ const firebaseConfig = {
         let operatorBonus = 0;
         if (currentOperator === '*') operatorBonus = 10;
         else if (currentOperator === '-') operatorBonus = 2;
+	else if (currentOperator === '/') operatorBonus = 20;
 
         let operandBonus = 0;
         if (currentOperands[0] > 8 || currentOperands[1] > 8) operandBonus += 3;
