@@ -835,7 +835,16 @@ function updateChampionButtonDisplay() {
         }
         // Mage target is handled within its own logic block
 
-
+ // --- START ADDITION: Update Rally Buff Timer ---
+        if (this.isRallyBuffed) {
+            this.rallyBuffTimer--;
+            if (this.rallyBuffTimer <= 0) {
+                this.isRallyBuffed = false; // Buff expired
+                this.rallyMultiplier = 1; // Reset multiplier
+                this.rallyBuffTimer = 0; // Ensure timer is 0
+            }
+        }
+        // --- END ADDITION ---
         // --- Calculate Target/Goal Movement Based on Type ---
 
         if (this.type === 'enemy') {
@@ -1618,6 +1627,7 @@ class Champion extends Unit {
                 // Assuming Unit class has rallyMultiplier property
                 unit.rallyMultiplier = 1 + CHAMPION_RALLY_BUFF_PERCENT;
                 this.rallyBuffAppliedTo.add(unit); // Track who got buffed
+		 unit.rallyBuffTimer = CHAMPION_RALLY_DURATION; 
 		unit.isRallyBuffed = true; // <<< SET FLAG
                  // Add visual indicator to buffed units? (e.g., brief color change)
                  // unit.healFlashTimer = FLASH_DURATION / 2; // Quick blue flash?
