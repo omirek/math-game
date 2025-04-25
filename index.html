@@ -315,7 +315,7 @@ const CHAMPION_RALLY_DURATION = 500; // Frames (5 seconds)
 const CHAMPION_RALLY_RANGE = 200;
 const CHAMPION_RALLY_BUFF_PERCENT = 0.50; // +30% damage
 
-const CHAMPION_SLAM_COOLDOWN = 1500; // Frames (25 seconds)
+const CHAMPION_SLAM_COOLDOWN = 1000; // Frames (25 seconds)
 const CHAMPION_SLAM_TRIGGER_RANGE = 100; // Enemy must be this close to trigger
 const CHAMPION_SLAM_EFFECT_RANGE = 400; // Affects enemies within this range
 const CHAMPION_SLAM_INITIAL_SPEED = 7.0; // Push speed
@@ -1276,11 +1276,9 @@ function updateChampionButtonDisplay() {
 
           // Find the best target unit (NOT self) currently within healRange
           for (const unit of units) {
-	      // --- START ADDITION: Prevent Healing Champion ---
-            if (unit === this || unit instanceof Champion) continue; // Skip self & Champions
-            // --- END ADDITION ---
+	
               // Skip self & units at full health
-              if (unit === this || unit.hp >= unit.maxHp) continue;
+              if (unit === this || unit.hp >= unit.maxHp || unit instanceof Champion) continue;
 
               const dist = this.distanceTo(unit);
 
