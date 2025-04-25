@@ -256,6 +256,7 @@ const firebaseConfig = {
             <button onclick="spawnUnit('melee')">Spawn [M]elee (Cost: 10)</button>
             <button onclick="spawnUnit('archer')">Spawn [A]rcher (Cost: 15)</button>
             <button onclick="spawnUnit('mage')">Spawn Ma[G]e (Cost: 30)</button>
+            <button id="spawnChampionBtn" onclick="spawnChampion()">Spawn Champion (Cost: 200)</button> <!-- Initial text -->
             <button id="upgradeCapButton" onclick="upgradeArmyCap()" style="background-color: gold;">
                 [U]pgrade Cap (<span id="capBefore">10</span> -> <span id="capAfter">15</span>) (Cost: <span id="capCost">75</span>)
             </button>
@@ -299,6 +300,29 @@ const firebaseConfig = {
     const highScoresCollectionRef = collection(db, 'highscores'); // Reference to the collection
     const MAX_HIGH_SCORES = 10;
     // --- END FIREBASE V9+ SETUP ---
+
+    // --- Champion Constants ---
+const CHAMPION_RADIUS = 18;
+const CHAMPION_COLOR = '#FFD700'; // Gold
+const CHAMPION_MAX_HP = 450;
+const CHAMPION_SPEED = 1.0; // Slowest
+const CHAMPION_ATTACK_DAMAGE = 8.0;
+const CHAMPION_ATTACK_COOLDOWN = 55; // Frames
+const CHAMPION_ATTACK_RANGE = 35;
+
+const CHAMPION_RALLY_COOLDOWN = 1200; // Frames (20 seconds)
+const CHAMPION_RALLY_DURATION = 300; // Frames (5 seconds)
+const CHAMPION_RALLY_RANGE = 160;
+const CHAMPION_RALLY_BUFF_PERCENT = 0.30; // +30% damage
+
+const CHAMPION_SLAM_COOLDOWN = 1500; // Frames (25 seconds)
+const CHAMPION_SLAM_TRIGGER_RANGE = 100; // Enemy must be this close to trigger
+const CHAMPION_SLAM_EFFECT_RANGE = 160; // Affects enemies within this range
+const CHAMPION_SLAM_INITIAL_SPEED = 7.0; // Push speed
+const CHAMPION_SLAM_DAMAGE = 20;
+
+const CHAMPION_INITIAL_COST = 200;
+const CHAMPION_COST_INCREASE = 125;
 	  
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -336,6 +360,10 @@ const firebaseConfig = {
     let waveSpawnInterval = 0; // Frames between spawns for the current wave
 
     let correctAnswerTimeoutId = null; // Timer ID for the answer overlay
+
+    // Near other globals like 'score', 'units', 'enemies'
+let currentChampionCost = CHAMPION_INITIAL_COST;
+let championExists = false;
 
     const BASE_INTERMISSION_DURATION = 25 * 60; // 15 seconds in frames (assuming 60fps)
     const INITIAL_INTERMISSION_DURATION = 8 * 60; // Shorter pause before Wave 1
@@ -415,6 +443,7 @@ const firebaseConfig = {
    function updateScoreDisplay() {
      document.getElementById('score').innerText = score;
      document.getElementById('mathScore').innerText = mathScore;
+     updateChampionButtonDisplay(); // Add this call
    }
 
 
@@ -460,7 +489,75 @@ const firebaseConfig = {
       ctx.restore();
     }
 
+// --- Champion Spawning Function ---
+function spawnChampion() {
+    if (!gameRunning) return;
+    // console.log(`Attempting to spawn Champion. Exists: ${championExists}, Score: ${score}, Cost: ${currentChampionCost}`);
 
+    if (championExists) {
+        // console.log("Champion already exists!");
+        playSound(sndNoMana); // Using no mana sound for "limit reached"
+        return;
+    }
+
+    if (score < currentChampionCost) {
+        // console.log("Not enough gold for Champion!");
+        playSound(sndNoGold);
+        return;
+    }
+
+    // Deduct cost & update state
+    score -= currentChampionCost;
+    championExists = true;
+
+    // Spawn near castle
+    const spawnZoneY = castle.y - castle.height / 2 - 60;
+    let spawnX = castle.x + (Math.random() - 0.5) * castle.width * 1.0; // Closer to center
+    let spawnY = spawnZoneY + (Math.random() - 0.5) * 30;
+    spawnX = Math.max(SAFE_MARGIN, Math.min(spawnX, canvas.width - SAFE_MARGIN));
+    spawnY = Math.max(SAFE_MARGIN, Math.min(spawnY, canvas.height - SAFE_MARGIN - castle.height));
+
+    // Create and add Champion
+    const champ = new Champion(spawnX, spawnY);
+    units.push(champ);
+    console.log("Champion Spawned!");
+
+    // Increase cost for the *next* spawn
+    currentChampionCost += CHAMPION_COST_INCREASE;
+
+    // Update displays
+    updateScoreDisplay(); // This should implicitly call updateChampionButtonDisplay
+    playSound(sndSpawnSuccess); // Use generic spawn or create sndChampionSpawn
+}
+window.spawnChampion = spawnChampion; // Make it global
+// --- Champion Button Update Function ---
+function updateChampionButtonDisplay() {
+    // *** MAKE SURE 'spawnChampionBtn' is the actual ID you use in your HTML ***
+    const button = document.getElementById('spawnChampionBtn');
+    if (!button) return;
+
+    // Update text with current cost
+    button.textContent = `Spawn Champion (Cost: ${currentChampionCost})`;
+
+    // Update disabled state and tooltip
+    if (championExists) {
+        button.disabled = true;
+        button.title = "Only one Champion allowed.";
+        button.style.cursor = 'not-allowed';
+        button.style.opacity = '0.6';
+    } else if (score < currentChampionCost) {
+        button.disabled = true;
+        button.title = `Requires ${currentChampionCost} Gold.`;
+        button.style.cursor = 'not-allowed';
+        button.style.opacity = '0.6';
+    } else {
+        button.disabled = false;
+        button.title = ""; // Clear tooltip
+        button.style.cursor = 'pointer';
+        button.style.opacity = '1';
+    }
+}
+	  
         function askMathProblem() {
       // 1. Add '/' to the list of possible operators
       const ops = ['+', '-', '*', '/'];
@@ -599,6 +696,7 @@ const firebaseConfig = {
         this.hp = this.maxHp;
         this.target = null;
         this.cooldown = 0; // For attacks/abilities
+	this.rallyMultiplier = 1; // Default damage multiplier
 	
 
         // Type-specific properties
@@ -635,13 +733,25 @@ const firebaseConfig = {
         this.bounceVelY = 0; // Current velocity component from bounce Y
         this.bounceDecay = 0.95; // Velocity retained each frame (e.g., 0.92 = loses 8% per frame)
             break;
+	 case 'champion': // Set defaults here if needed, but constructor overrides
+         this.color = CHAMPION_COLOR;
+         this.speed = CHAMPION_SPEED;
+         this.range = CHAMPION_ATTACK_RANGE;
+         this.maxHp = CHAMPION_MAX_HP;
+         this.attackDamage = CHAMPION_ATTACK_DAMAGE;
+         this.attackCooldownBase = CHAMPION_ATTACK_COOLDOWN;
+         break;
           default:
              this.color = 'grey';
              this.speed = 1;
              this.range = 10;
              this.attackDamage = 0.5;
-             this.attackCooldown = 60;
+             this.attackCooldownBase = 60;
         }
+	       // Ensure HP is set correctly based on maxHp
+    this.hp = this.maxHp;
+    // Ensure attack cooldown is set if base exists
+    this.attackCooldown = this.attackCooldownBase;
       }
 
       draw() {
@@ -948,9 +1058,8 @@ const firebaseConfig = {
             // --- START FIX: Ensure oldHp is defined here ---
             const oldHp = target.hp; // Store target's HP *before* dealing damage
             // --- END FIX ---
-
-            // Apply damage
-            target.hp -= this.attackDamage;
+	    const damageDealt = this.attackDamage * this.rallyMultiplier;
+          target.hp -= damageDealt;
 
             // Trigger damage flash
             target.damageFlashTimer = FLASH_DURATION;
@@ -1003,7 +1112,17 @@ const firebaseConfig = {
       remove() {
         const list = (this.type === 'enemy' ? enemies : units);
         const idx = list.indexOf(this);
-        if (idx !== -1) list.splice(idx, 1);
+        if (idx !== -1) {
+        // --- START ADDITION ---
+        // Check if the removed unit is the Champion
+        if (this instanceof Champion) {
+            championExists = false; // Update the global flag
+            console.log("Champion removed, flag set to false."); // Debug log
+            updateChampionButtonDisplay(); // Update button state immediately
+        }
+        // --- END ADDITION ---
+		list.splice(idx, 1);
+      }
       }
 
       // Placeholder methods for Mage - will be overridden but prevent errors if called on base Unit
@@ -1137,6 +1256,9 @@ const firebaseConfig = {
 
           // Find the best target unit (NOT self) currently within healRange
           for (const unit of units) {
+	      // --- START ADDITION: Prevent Healing Champion ---
+            if (unit === this || unit instanceof Champion) continue; // Skip self & Champions
+            // --- END ADDITION ---
               // Skip self & units at full health
               if (unit === this || unit.hp >= unit.maxHp) continue;
 
@@ -1265,6 +1387,319 @@ const firebaseConfig = {
       }
     } // End of Mage Class
 
+    // Ensure CHAMPION_ constants are defined before this class
+// Ensure Unit class has 'rallyMultiplier' property (default 1)
+
+class Champion extends Unit {
+    constructor(x, y) {
+        super(x, y, 'champion'); // Call base class constructor
+
+        // --- Assign Core Stats from Constants ---
+        this.radius = CHAMPION_RADIUS;
+        this.color = CHAMPION_COLOR;
+        this.maxHp = CHAMPION_MAX_HP;
+        this.hp = this.maxHp;
+        this.speed = CHAMPION_SPEED;
+        this.range = CHAMPION_ATTACK_RANGE; // Melee attack range
+        this.attackDamage = CHAMPION_ATTACK_DAMAGE;
+        this.attackCooldownBase = CHAMPION_ATTACK_COOLDOWN; // Store base cooldown
+        this.cooldown = 0; // Use the standard cooldown timer for basic attacks
+
+        // --- Ability State & Timers ---
+        this.rallyCooldownTimer = 0; // Time until Rally Cry can be used again
+        this.slamCooldownTimer = 0;  // Time until Repulsion Slam can be used again
+        this.rallyDurationTimer = 0; // How long the current rally buff lasts
+        this.rallyBuffAppliedTo = new Set(); // Tracks units currently buffed by this champ
+
+        // --- Slam Animation State (Similar to Mage Shockwave) ---
+        this.slamAnimActive = false;
+        this.slamAnimTimer = 0;
+        this.slamAnimDuration = 40; // Duration of slam visual effect (frames)
+        this.slamAnimMaxRadius = CHAMPION_SLAM_EFFECT_RANGE; // Visual expands to effect range
+    }
+
+    // --- Champion Update Logic (Overrides Unit.update partially) ---
+    update() {
+        // --- Initial Checks ---
+        if (this.hp <= 0) {
+            this.remove(); // Calls the Unit.remove(), which should handle championExists flag
+            return;
+        }
+
+        // --- Tick Down Timers ---
+        // Basic attack cooldown
+        if (this.cooldown > 0) {
+            this.cooldown--;
+        }
+        // Rally ability cooldown
+        if (this.rallyCooldownTimer > 0) {
+            this.rallyCooldownTimer--;
+        }
+        // Slam ability cooldown
+        if (this.slamCooldownTimer > 0) {
+            this.slamCooldownTimer--;
+        }
+        // Rally buff duration (if active)
+        if (this.rallyDurationTimer > 0) {
+            this.rallyDurationTimer--;
+            if (this.rallyDurationTimer <= 0) {
+                this.removeRallyBuff(); // Buff expired
+            }
+        }
+        // Slam animation timer (if active)
+        if (this.slamAnimActive) {
+            this.slamAnimTimer--;
+            if (this.slamAnimTimer <= 0) {
+                this.slamAnimActive = false;
+            }
+        }
+
+        // --- Ability Trigger Logic ---
+        // Try to use Rally Cry if ready
+        if (this.rallyCooldownTimer <= 0) {
+            this.performRally();
+        }
+        // Try to use Repulsion Slam if ready and enemy is close enough
+        if (this.slamCooldownTimer <= 0) {
+            // Check for nearby enemies to trigger the slam
+            let enemyInRange = false;
+            for (const enemy of enemies) {
+                if (enemy.hp > 0 && this.distanceTo(enemy) < CHAMPION_SLAM_TRIGGER_RANGE) {
+                    enemyInRange = true;
+                    break;
+                }
+            }
+            if (enemyInRange) {
+                this.performSlam();
+            }
+        }
+
+        // --- Movement & Attack Logic (Standard Melee Behavior) ---
+        let targetDX = 0;
+        let targetDY = 0;
+        this.target = this.findNearest(enemies); // Find closest enemy
+
+        if (this.target) {
+            const dist = this.distanceTo(this.target);
+            if (dist <= this.range) {
+                this.attack(this.target); // Attack if in range (uses standard cooldown)
+                targetDX = 0; targetDY = 0; // Stop moving
+            } else { // Move towards target
+                const dx = this.target.x - this.x;
+                const dy = this.target.y - this.y;
+                const targetDist = Math.hypot(dx, dy);
+                if (targetDist > 0) {
+                    targetDX = (dx / targetDist);
+                    targetDY = (dy / targetDist);
+                }
+            }
+        } else {
+            targetDX = 0; targetDY = 0; // No target, stand still
+        }
+
+
+        // --- Calculate Separation Force (Copied from Unit.update) ---
+        let separationDX = 0;
+        let separationDY = 0;
+        const nearbyUnits = [...units, ...enemies]; // Check against all units
+        for (const other of nearbyUnits) {
+          if (other === this || other.hp <= 0) continue;
+          const dist = this.distanceTo(other);
+          if (dist > 0 && dist < SEPARATION_DISTANCE) { // Use global SEPARATION_DISTANCE
+            const pushX = this.x - other.x;
+            const pushY = this.y - other.y;
+            const strength = SEPARATION_STRENGTH * (1 - dist / SEPARATION_DISTANCE); // Use global SEPARATION_STRENGTH
+            separationDX += (pushX / dist) * strength;
+            separationDY += (pushY / dist) * strength;
+          }
+        }
+
+        // --- Apply Movement Logic (Copied & Adapted from Unit.update) ---
+        // Note: Champions are not currently affected by Mage bounce, so no bounceVel check needed here
+        // If they could be bounced later, add bounce logic back here.
+        let moveX = 0;
+        let moveY = 0;
+
+        const normalDX = targetDX + separationDX; // Combine target intent with separation
+        const normalDY = targetDY + separationDY;
+        const normalDist = Math.hypot(normalDX, normalDY);
+        if (normalDist > 0) {
+            moveX = (normalDX / normalDist) * this.speed; // Apply speed scaling
+            moveY = (normalDY / normalDist) * this.speed;
+        }
+
+        // Apply final calculated movement
+        this.x += moveX;
+        this.y += moveY;
+
+        // --- Post-Movement Actions ---
+        this.enforceBounds();
+    } // End of update()
+
+    // --- Standard Attack (Overrides Unit.attack if needed, but logic is similar) ---
+    attack(target) {
+        // Uses the standard Unit cooldown timer 'this.cooldown'
+        if (this.cooldown <= 0 && target && target.hp > 0) {
+            const oldHp = target.hp;
+            // Apply base damage (rallyMultiplier is applied in Unit class potentially)
+            // Assuming Unit.attack handles rallyMultiplier, otherwise add '* this.rallyMultiplier'
+            target.hp -= this.attackDamage; // Apply Champion's damage
+            target.damageFlashTimer = FLASH_DURATION; // Use global FLASH_DURATION
+            this.cooldown = this.attackCooldownBase; // Reset basic attack cooldown
+
+            if (target.hp < oldHp) {
+                 playSound(sndMeleeHit); // Use standard melee hit sound? Or unique champ sound?
+            }
+             if (target.hp <= 0) {
+                 this.target = null; // Clear target if it died
+             }
+        }
+    }
+
+    // --- Ability 1: Rallying Cry ---
+    performRally() {
+        // console.log("Champion: Rallying Cry!"); // Debug
+        this.rallyCooldownTimer = CHAMPION_RALLY_COOLDOWN; // Reset cooldown
+        this.rallyDurationTimer = CHAMPION_RALLY_DURATION; // Start buff duration
+        this.removeRallyBuff(); // Clear any previous buff just in case
+        this.rallyBuffAppliedTo.clear(); // Ensure set is empty
+
+        // Add visual/sound effect here? e.g., temporary aura
+        // playSound(sndRallyCry); // Need sndRallyCry variable
+
+        // Find nearby allies and apply buff
+        for (const unit of units) {
+             // Don't buff self, don't buff other champions (if ever possible), only buff allies in range
+            if (unit !== this && !(unit instanceof Champion) && this.distanceTo(unit) < CHAMPION_RALLY_RANGE) {
+                // Assuming Unit class has rallyMultiplier property
+                unit.rallyMultiplier = 1 + CHAMPION_RALLY_BUFF_PERCENT;
+                this.rallyBuffAppliedTo.add(unit); // Track who got buffed
+                 // Add visual indicator to buffed units? (e.g., brief color change)
+                 // unit.healFlashTimer = FLASH_DURATION / 2; // Quick blue flash?
+            }
+        }
+    }
+
+    // --- Helper to Remove Rally Buff ---
+    removeRallyBuff() {
+        // console.log("Champion: Rally Buff Expired."); // Debug
+        this.rallyBuffAppliedTo.forEach(unit => {
+            if (unit) { // Check if unit still exists
+                unit.rallyMultiplier = 1; // Reset multiplier
+                 // Remove visual indicator?
+            }
+        });
+        this.rallyBuffAppliedTo.clear(); // Clear the tracking set
+    }
+
+    // --- Ability 2: Repulsion Slam ---
+    performSlam() {
+        // console.log("Champion: Repulsion Slam!"); // Debug
+        this.slamCooldownTimer = CHAMPION_SLAM_COOLDOWN; // Reset cooldown
+
+        // Trigger visual effect
+        this.slamAnimActive = true;
+        this.slamAnimTimer = this.slamAnimDuration;
+        // playSound(sndSlam); // Need sndSlam variable
+
+        // Find nearby enemies and apply effects
+        for (const enemy of enemies) {
+            if (enemy.hp <= 0) continue; // Skip dead enemies
+
+            const dist = this.distanceTo(enemy);
+            if (dist < CHAMPION_SLAM_EFFECT_RANGE) {
+                // 1. Apply Damage
+                enemy.hp -= CHAMPION_SLAM_DAMAGE;
+                enemy.damageFlashTimer = FLASH_DURATION; // Trigger red flash
+
+                // 2. Apply Bounce Velocity
+                if (dist > 0) { // Avoid division by zero if exactly on top
+                    const dx = enemy.x - this.x;
+                    const dy = enemy.y - this.y;
+                    const normalizedX = dx / dist;
+                    const normalizedY = dy / dist;
+                    // Apply bounce velocity (uses variables on the enemy Unit)
+                    enemy.bounceVelX = normalizedX * CHAMPION_SLAM_INITIAL_SPEED;
+                    enemy.bounceVelY = normalizedY * CHAMPION_SLAM_INITIAL_SPEED;
+                }
+            }
+        }
+         // Check HP again after applying damage (in case they died) - handled by enemy's own update loop
+    }
+
+    // --- Draw Champion (Override Unit.draw) ---
+    draw() {
+        // 1. Draw the base unit (circle, HP bar) using Unit's draw method
+        super.draw(); // Calls Unit.prototype.draw()
+
+        // --- Draw Champion Specifics ---
+        const crownSize = this.radius * 0.5;
+        const crownY = this.y - this.radius - 8 - 5; // Above HP bar (-8) + 5px gap
+        const fistRadius = this.radius * 0.3;
+        const fistOffsetX = this.radius * 1.3;
+        const fistOffsetY = this.radius * 0.2; // Slightly below center vertically
+
+        // 2. Draw Crown
+        ctx.fillStyle = 'yellow';
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(this.x - crownSize / 2, crownY);
+        ctx.lineTo(this.x - crownSize / 4, crownY - crownSize * 0.8); // Left point
+        ctx.lineTo(this.x, crownY); // Back to middle base
+        ctx.lineTo(this.x, crownY - crownSize); // Middle point
+        ctx.lineTo(this.x, crownY); // Back to middle base
+        ctx.lineTo(this.x + crownSize / 4, crownY - crownSize * 0.8); // Right point
+        ctx.lineTo(this.x + crownSize / 2, crownY); // Right base
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // 3. Draw Floating Fists
+        ctx.fillStyle = this.color; // Use Champion's main color
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 1;
+        // Left Fist
+        ctx.beginPath();
+        ctx.arc(this.x - fistOffsetX, this.y + fistOffsetY, fistRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        // Right Fist
+        ctx.beginPath();
+        ctx.arc(this.x + fistOffsetX, this.y + fistOffsetY, fistRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // 4. Draw Slam Animation (if active) - Similar to Mage bounce shockwave
+        if (this.slamAnimActive) {
+            const progress = 1.0 - (this.slamAnimTimer / this.slamAnimDuration);
+            const currentRadius = this.slamAnimMaxRadius * progress;
+            const opacity = 1.0 - progress;
+            const safeOpacity = Math.max(0, opacity);
+            // Use a different color, e.g., white/yellow
+            ctx.strokeStyle = `rgba(255, 255, 150, ${safeOpacity})`; // Pale Yellow
+            ctx.lineWidth = Math.max(1, 6 * (1.0 - progress) + 1); // Thicker effect?
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, currentRadius, 0, Math.PI * 2);
+            if (safeOpacity > 0.05) {
+                ctx.stroke();
+            }
+        }
+
+        // 5. Draw Rally Aura (Optional - if active)
+        if (this.rallyDurationTimer > 0) {
+             const rallyProgress = this.rallyDurationTimer / CHAMPION_RALLY_DURATION; // 1 down to 0
+             const rallyOpacity = 0.2 + rallyProgress * 0.3; // Fades from 0.5 to 0.2
+             ctx.fillStyle = `rgba(255, 215, 0, ${rallyOpacity})`; // Fading Gold aura fill?
+             ctx.beginPath();
+             ctx.arc(this.x, this.y, this.radius * 1.2, 0, Math.PI * 2); // Aura slightly larger than unit
+             ctx.fill();
+        }
+
+    } // End of draw()
+
+} // End of Champion Class
+	  
     // --- Projectile Class ---
     class Projectile {
       constructor(x, y, target, damage, owner) { // Added damage and owner
@@ -1292,7 +1727,14 @@ const firebaseConfig = {
         // Check for hit (collision)
         if (dist < this.target.radius + this.radius || dist < this.speed) {
 	  const oldHp = this.target.hp; // Store target's HP *before* dealing damage
-          this.target.hp -= this.damage;
+           // --- START MODIFICATION: Apply Rally Multiplier from Owner ---
+            // Ensure owner exists and has the multiplier property, default to 1 otherwise
+            const multiplier = (this.owner && typeof this.owner.rallyMultiplier === 'number')
+                               ? this.owner.rallyMultiplier
+                               : 1;
+            const damageDealt = this.damage * multiplier;
+            this.target.hp -= damageDealt;
+            // --- END MODIFICATION ---
           this.done = true;
 
 	  // --- ADD SOUND ---
