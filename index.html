@@ -256,7 +256,7 @@ const firebaseConfig = {
             <button onclick="spawnUnit('melee')">Spawn [M]elee (Cost: 10)</button>
             <button onclick="spawnUnit('archer')">Spawn [A]rcher (Cost: 15)</button>
             <button onclick="spawnUnit('mage')">Spawn Ma[G]e (Cost: 30)</button>
-            <button id="spawnChampionBtn" onclick="spawnChampion()">Spawn Champion (Cost: 200)</button> <!-- Initial text -->
+            <button id="spawnChampionBtn" onclick="spawnChampion()">Spawn [C]hampion (Cost: 200)</button> <!-- Initial text -->
             <button id="upgradeCapButton" onclick="upgradeArmyCap()" style="background-color: gold;">
                 [U]pgrade Cap (<span id="capBefore">10</span> -> <span id="capAfter">15</span>) (Cost: <span id="capCost">75</span>)
             </button>
@@ -778,21 +778,22 @@ function updateChampionButtonDisplay() {
         ctx.fillStyle = healthRatio > 0.5 ? 'lime' : healthRatio > 0.2 ? 'yellow' : 'red';
         ctx.fillRect(barX, barY, barWidth * healthRatio, barHeight);
 
-	        // --- START REPLACEMENT: Rally Buff Highlight Outline ---
-        // Define default outline style
-        let currentStrokeStyle = 'black';
-        let currentLineWidth = 1;
+	          // --- START ADDITION: Draw Rally Buff Fading Aura ---
+        if (this.isRallyBuffed && this.rallyBuffTimer > 0) {
+            // Calculate progress based on the UNIT'S timer
+            // Progress goes 1 down to 0 as timer decreases
+            const rallyProgress = this.rallyBuffTimer / CHAMPION_RALLY_DURATION;
+            // Opacity fades from 0.5 down to 0.2 (same as Champion's aura)
+            const rallyOpacity = 0.2 + rallyProgress * 0.3;
+            // Use fixed color or make slightly different from Champion's?
+            ctx.fillStyle = `rgba(255, 215, 0, ${rallyOpacity})`; // Fading Gold aura fill
 
-        // If unit is buffed by rally, change the outline style
-        if (this.isRallyBuffed) {
-            currentStrokeStyle = 'gold'; // Or 'yellow', '#FFD700'
-            currentLineWidth = 3;      // Make the outline thicker
+            ctx.beginPath();
+            // Draw slightly larger than the unit's radius
+            ctx.arc(this.x, this.y, this.radius * 1.2, 0, Math.PI * 2);
+            ctx.fill();
         }
-
-        // Apply the determined outline style before drawing the stroke
-        ctx.strokeStyle = currentStrokeStyle;
-        ctx.lineWidth = currentLineWidth;
-        // --- END REPLACEMENT ---
+        // --- END ADDITION ---
 
         // The existing ctx.stroke() call later in the function will now use these styles
       }
