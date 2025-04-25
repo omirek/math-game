@@ -539,7 +539,7 @@ function updateChampionButtonDisplay() {
     if (!button) return;
 
     // Update text with current cost
-    button.textContent = `Spawn Champion (Cost: ${currentChampionCost})`;
+    button.textContent = `Spawn [C]hampion (Cost: ${currentChampionCost})`;
 
     // Update disabled state and tooltip
     if (championExists) {
@@ -758,6 +758,23 @@ function updateChampionButtonDisplay() {
 
       draw() {
         // Body
+          // --- START ADDITION: Draw Rally Buff Fading Aura ---
+        if (this.isRallyBuffed && this.rallyBuffTimer > 0) {
+            // Calculate progress based on the UNIT'S timer
+            // Progress goes 1 down to 0 as timer decreases
+            const rallyProgress = this.rallyBuffTimer / CHAMPION_RALLY_DURATION;
+            // Opacity fades from 0.5 down to 0.2 (same as Champion's aura)
+            const rallyOpacity = 0.2 + rallyProgress * 0.3;
+            // Use fixed color or make slightly different from Champion's?
+            ctx.fillStyle = `rgba(255, 215, 0, ${rallyOpacity})`; // Fading Gold aura fill
+
+            ctx.beginPath();
+            // Draw slightly larger than the unit's radius
+            ctx.arc(this.x, this.y, this.radius * 1.2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        // --- END ADDITION ---
+	
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fillStyle = this.color;
@@ -777,23 +794,6 @@ function updateChampionButtonDisplay() {
         ctx.fillRect(barX, barY, barWidth, barHeight);
         ctx.fillStyle = healthRatio > 0.5 ? 'lime' : healthRatio > 0.2 ? 'yellow' : 'red';
         ctx.fillRect(barX, barY, barWidth * healthRatio, barHeight);
-
-	          // --- START ADDITION: Draw Rally Buff Fading Aura ---
-        if (this.isRallyBuffed && this.rallyBuffTimer > 0) {
-            // Calculate progress based on the UNIT'S timer
-            // Progress goes 1 down to 0 as timer decreases
-            const rallyProgress = this.rallyBuffTimer / CHAMPION_RALLY_DURATION;
-            // Opacity fades from 0.5 down to 0.2 (same as Champion's aura)
-            const rallyOpacity = 0.2 + rallyProgress * 0.3;
-            // Use fixed color or make slightly different from Champion's?
-            ctx.fillStyle = `rgba(255, 215, 0, ${rallyOpacity})`; // Fading Gold aura fill
-
-            ctx.beginPath();
-            // Draw slightly larger than the unit's radius
-            ctx.arc(this.x, this.y, this.radius * 1.2, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        // --- END ADDITION ---
 
         // The existing ctx.stroke() call later in the function will now use these styles
       }
