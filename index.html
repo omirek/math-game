@@ -697,6 +697,7 @@ function updateChampionButtonDisplay() {
         this.target = null;
         this.cooldown = 0; // For attacks/abilities
 	this.rallyMultiplier = 1; // Default damage multiplier
+	this.isRallyBuffed = false; // <<< ADD THIS
 	
 
         // Type-specific properties
@@ -774,6 +775,19 @@ function updateChampionButtonDisplay() {
         ctx.fillRect(barX, barY, barWidth, barHeight);
         ctx.fillStyle = healthRatio > 0.5 ? 'lime' : healthRatio > 0.2 ? 'yellow' : 'red';
         ctx.fillRect(barX, barY, barWidth * healthRatio, barHeight);
+
+	// --- START ADDITION: Rally Buff Indicator ---
+        if (this.isRallyBuffed) {
+            ctx.fillStyle = 'rgba(255, 215, 0, 0.8)'; // Semi-transparent gold
+            const orbRadius = this.radius * 0.4;
+            // Position above unit, adjust Y offset as needed relative to HP bar
+            const healthBarY = this.y - this.radius - 8; // Assuming HP bar starts here
+            const orbY = healthBarY - orbRadius - 2; // Above HP bar with 2px gap
+            ctx.beginPath();
+            ctx.arc(this.x, orbY, orbRadius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        // --- END ADDITION ---
       }
 
           update() {
@@ -1403,6 +1417,7 @@ class Champion extends Unit {
         this.attackDamage = CHAMPION_ATTACK_DAMAGE;
         this.attackCooldownBase = CHAMPION_ATTACK_COOLDOWN; // Store base cooldown
         this.cooldown = 0; // Use the standard cooldown timer for basic attacks
+	this.targetAngle = 0; // Initialize angle (e.g., facing right)
 
         // --- Ability State & Timers ---
         this.rallyCooldownTimer = 0; // Time until Rally Cry can be used again
@@ -1480,6 +1495,10 @@ class Champion extends Unit {
 
         if (this.target) {
             const dist = this.distanceTo(this.target);
+	     if (targetDist > 0) {
+                // Calculate angle from Champion to Target in radians
+                this.targetAngle = Math.atan2(dy, dx);
+            }
             if (dist <= this.range) {
                 this.attack(this.target); // Attack if in range (uses standard cooldown)
                 targetDX = 0; targetDY = 0; // Stop moving
@@ -1573,6 +1592,7 @@ class Champion extends Unit {
                 // Assuming Unit class has rallyMultiplier property
                 unit.rallyMultiplier = 1 + CHAMPION_RALLY_BUFF_PERCENT;
                 this.rallyBuffAppliedTo.add(unit); // Track who got buffed
+		unit.isRallyBuffed = true; // <<< SET FLAG
                  // Add visual indicator to buffed units? (e.g., brief color change)
                  // unit.healFlashTimer = FLASH_DURATION / 2; // Quick blue flash?
             }
@@ -1585,6 +1605,7 @@ class Champion extends Unit {
         this.rallyBuffAppliedTo.forEach(unit => {
             if (unit) { // Check if unit still exists
                 unit.rallyMultiplier = 1; // Reset multiplier
+		unit.isRallyBuffed = false; // <<< RESET FLAG
                  // Remove visual indicator?
             }
         });
@@ -1637,7 +1658,20 @@ class Champion extends Unit {
         const fistRadius = this.radius * 0.3;
         const fistOffsetX = this.radius * 1.3;
         const fistOffsetY = this.radius * 0.2; // Slightly below center vertically
+	const fistAngleOffset = Math.PI / 2.5;
 
+	// --- START MODIFICATION: Calculate Fist Positions using Angle ---
+        // Left Fist Position
+        const leftFistAngle = this.targetAngle + fistAngleOffset;
+        const leftFistX = this.x + Math.cos(leftFistAngle) * fistDist;
+        const leftFistY = this.y + Math.sin(leftFistAngle) * fistDist;
+
+        // Right Fist Position
+        const rightFistAngle = this.targetAngle - fistAngleOffset;
+        const rightFistX = this.x + Math.cos(rightFistAngle) * fistDist;
+        const rightFistY = this.y + Math.sin(rightFistAngle) * fistDist;
+        // --- END MODIFICATION ---
+	    
         // 2. Draw Crown
         ctx.fillStyle = 'yellow';
         ctx.strokeStyle = 'black';
