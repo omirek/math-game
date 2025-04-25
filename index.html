@@ -317,7 +317,7 @@ const CHAMPION_RALLY_BUFF_PERCENT = 0.30; // +30% damage
 
 const CHAMPION_SLAM_COOLDOWN = 1500; // Frames (25 seconds)
 const CHAMPION_SLAM_TRIGGER_RANGE = 100; // Enemy must be this close to trigger
-const CHAMPION_SLAM_EFFECT_RANGE = 300; // Affects enemies within this range
+const CHAMPION_SLAM_EFFECT_RANGE = 350; // Affects enemies within this range
 const CHAMPION_SLAM_INITIAL_SPEED = 7.0; // Push speed
 const CHAMPION_SLAM_DAMAGE = 50;
 
@@ -384,6 +384,8 @@ let championExists = false;
     const sndMathIncorrect = new Audio('sounds/wrong-answer-sound.mp3');
     const sndWaveStart = new Audio('sounds/start-game.mp3');
     const sndGameOver = new Audio('sounds/game-over.mp3');
+     const sndRallyCry = new Audio('sounds/rally_cry.mp3'); // Sound for rally activation
+    const sndSlam = new Audio('sounds/slam_impact.mp3');   // Sound for slam activation
     // Optional: Adjust volume (0.0 to 1.0) if needed
     sndSpawnSuccess.volume = 1;
     sndNoGold.volume = 1;
@@ -1485,16 +1487,17 @@ class Champion extends Unit {
         // Try to use Repulsion Slam if ready and enemy is close enough
         if (this.slamCooldownTimer <= 0) {
             // Check for nearby enemies to trigger the slam
-            let enemyInRange = false;
-            for (const enemy of enemies) {
-                if (enemy.hp > 0 && this.distanceTo(enemy) < CHAMPION_SLAM_TRIGGER_RANGE) {
-                    enemyInRange = true;
-                    break;
+            let enemiesInRangeCount = 0;
+                for (const enemy of enemies) {
+                    if (enemy.hp > 0 && this.distanceTo(enemy) < CHAMPION_SLAM_TRIGGER_RANGE) {
+                        enemiesInRangeCount++;
+                    }
                 }
-            }
-            if (enemyInRange) {
-                this.performSlam();
-            }
+
+                // Trigger only if enough enemies are nearby
+                if (enemiesInRangeCount >= 5) {
+                     this.performSlam(); // Call performSlam if condition met
+                }
         }
 
         // --- Movement & Attack Logic (Standard Melee Behavior) ---
@@ -1594,8 +1597,7 @@ class Champion extends Unit {
         this.removeRallyBuff(); // Clear any previous buff just in case
         this.rallyBuffAppliedTo.clear(); // Ensure set is empty
 
-        // Add visual/sound effect here? e.g., temporary aura
-        // playSound(sndRallyCry); // Need sndRallyCry variable
+	playSound(sndRallyCry);
 
         // Find nearby allies and apply buff
         for (const unit of units) {
@@ -1632,7 +1634,7 @@ class Champion extends Unit {
         // Trigger visual effect
         this.slamAnimActive = true;
         this.slamAnimTimer = this.slamAnimDuration;
-        // playSound(sndSlam); // Need sndSlam variable
+        playSound(sndSlam);
 
         // Find nearby enemies and apply effects
         for (const enemy of enemies) {
