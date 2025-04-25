@@ -302,7 +302,7 @@ const firebaseConfig = {
     // --- END FIREBASE V9+ SETUP ---
 
     // --- Champion Constants ---
-const CHAMPION_RADIUS = 18;
+const CHAMPION_RADIUS = 15;
 const CHAMPION_COLOR = '#FFD700'; // Gold
 const CHAMPION_MAX_HP = 450;
 const CHAMPION_SPEED = 1.0; // Slowest
@@ -312,12 +312,12 @@ const CHAMPION_ATTACK_RANGE = 35;
 
 const CHAMPION_RALLY_COOLDOWN = 1200; // Frames (20 seconds)
 const CHAMPION_RALLY_DURATION = 500; // Frames (5 seconds)
-const CHAMPION_RALLY_RANGE = 160;
-const CHAMPION_RALLY_BUFF_PERCENT = 0.30; // +30% damage
+const CHAMPION_RALLY_RANGE = 200;
+const CHAMPION_RALLY_BUFF_PERCENT = 0.50; // +30% damage
 
 const CHAMPION_SLAM_COOLDOWN = 1500; // Frames (25 seconds)
 const CHAMPION_SLAM_TRIGGER_RANGE = 100; // Enemy must be this close to trigger
-const CHAMPION_SLAM_EFFECT_RANGE = 350; // Affects enemies within this range
+const CHAMPION_SLAM_EFFECT_RANGE = 400; // Affects enemies within this range
 const CHAMPION_SLAM_INITIAL_SPEED = 7.0; // Push speed
 const CHAMPION_SLAM_DAMAGE = 50;
 
@@ -778,18 +778,23 @@ function updateChampionButtonDisplay() {
         ctx.fillStyle = healthRatio > 0.5 ? 'lime' : healthRatio > 0.2 ? 'yellow' : 'red';
         ctx.fillRect(barX, barY, barWidth * healthRatio, barHeight);
 
-	// --- START ADDITION: Rally Buff Indicator ---
+	        // --- START REPLACEMENT: Rally Buff Highlight Outline ---
+        // Define default outline style
+        let currentStrokeStyle = 'black';
+        let currentLineWidth = 1;
+
+        // If unit is buffed by rally, change the outline style
         if (this.isRallyBuffed) {
-            ctx.fillStyle = 'rgba(255, 215, 0, 0.8)'; // Semi-transparent gold
-            const orbRadius = this.radius * 0.4;
-            // Position above unit, adjust Y offset as needed relative to HP bar
-            const healthBarY = this.y - this.radius - 8; // Assuming HP bar starts here
-            const orbY = healthBarY - orbRadius - 2; // Above HP bar with 2px gap
-            ctx.beginPath();
-            ctx.arc(this.x, orbY, orbRadius, 0, Math.PI * 2);
-            ctx.fill();
+            currentStrokeStyle = 'gold'; // Or 'yellow', '#FFD700'
+            currentLineWidth = 3;      // Make the outline thicker
         }
-        // --- END ADDITION ---
+
+        // Apply the determined outline style before drawing the stroke
+        ctx.strokeStyle = currentStrokeStyle;
+        ctx.lineWidth = currentLineWidth;
+        // --- END REPLACEMENT ---
+
+        // The existing ctx.stroke() call later in the function will now use these styles
       }
 
           update() {
@@ -2206,6 +2211,11 @@ class Champion extends Unit {
             flashButton('mage');
             shortcutUsed = true;
             break;
+	case 'c': // M key for Melee
+            spawnChampion(); // Call the specific spawn function for Champion
+                flashButton('champion'); // Update flashButton if needed
+                shortcutUsed = true;
+            break;
         case 'u': // U key for Upgrade Cap
             upgradeArmyCap(); // Call the upgrade function
             shortcutUsed = true;
@@ -2226,6 +2236,7 @@ class Champion extends Unit {
         if (unitType === 'melee') targetButton = buttons[0];
         else if (unitType === 'archer') targetButton = buttons[1];
         else if (unitType === 'mage') targetButton = buttons[2];
+	  else if (unitType === 'champion' && champButton) targetButton = champButton;
 
         if (targetButton) {
             const originalColor = targetButton.style.backgroundColor;
