@@ -311,15 +311,15 @@ const CHAMPION_ATTACK_COOLDOWN = 55; // Frames
 const CHAMPION_ATTACK_RANGE = 35;
 
 const CHAMPION_RALLY_COOLDOWN = 1200; // Frames (20 seconds)
-const CHAMPION_RALLY_DURATION = 300; // Frames (5 seconds)
+const CHAMPION_RALLY_DURATION = 500; // Frames (5 seconds)
 const CHAMPION_RALLY_RANGE = 160;
 const CHAMPION_RALLY_BUFF_PERCENT = 0.30; // +30% damage
 
 const CHAMPION_SLAM_COOLDOWN = 1500; // Frames (25 seconds)
 const CHAMPION_SLAM_TRIGGER_RANGE = 100; // Enemy must be this close to trigger
-const CHAMPION_SLAM_EFFECT_RANGE = 160; // Affects enemies within this range
+const CHAMPION_SLAM_EFFECT_RANGE = 300; // Affects enemies within this range
 const CHAMPION_SLAM_INITIAL_SPEED = 7.0; // Push speed
-const CHAMPION_SLAM_DAMAGE = 20;
+const CHAMPION_SLAM_DAMAGE = 50;
 
 const CHAMPION_INITIAL_COST = 200;
 const CHAMPION_COST_INCREASE = 125;
@@ -1500,6 +1500,7 @@ class Champion extends Unit {
 	     if (targetDist > 0) {
                 // Calculate angle from Champion to Target in radians
                 this.targetAngle = Math.atan2(dy, dx);
+		console.log(`Champion Angle Updated: ${this.targetAngle.toFixed(2)} radians`); 
             }
             if (targetDist <= this.range) {
                 this.attack(this.target); // Attack if in range (uses standard cooldown)
@@ -1696,12 +1697,12 @@ class Champion extends Unit {
         ctx.lineWidth = 1;
         // Left Fist
         ctx.beginPath();
-        ctx.arc(this.x - fistOffsetX, this.y + fistOffsetY, fistRadius, 0, Math.PI * 2);
+         ctx.arc(leftFistX, leftFistY, fistRadius, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
         // Right Fist
         ctx.beginPath();
-        ctx.arc(this.x + fistOffsetX, this.y + fistOffsetY, fistRadius, 0, Math.PI * 2);
+        ctx.arc(rightFistX, rightFistY, fistRadius, 0, Math.PI * 2); 
         ctx.fill();
         ctx.stroke();
 
