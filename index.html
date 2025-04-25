@@ -739,19 +739,18 @@ function updateChampionButtonDisplay() {
          this.range = CHAMPION_ATTACK_RANGE;
          this.maxHp = CHAMPION_MAX_HP;
          this.attackDamage = CHAMPION_ATTACK_DAMAGE;
-         this.attackCooldownBase = CHAMPION_ATTACK_COOLDOWN;
+         this.attackCooldown = CHAMPION_ATTACK_COOLDOWN;
          break;
           default:
              this.color = 'grey';
              this.speed = 1;
              this.range = 10;
              this.attackDamage = 0.5;
-             this.attackCooldownBase = 60;
+             this.attackCooldown = 60;
         }
 	       // Ensure HP is set correctly based on maxHp
     this.hp = this.maxHp;
-    // Ensure attack cooldown is set if base exists
-    this.attackCooldown = this.attackCooldownBase;
+
       }
 
       draw() {
