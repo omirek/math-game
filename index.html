@@ -1665,13 +1665,13 @@ class Champion extends Unit {
 	// --- START MODIFICATION: Calculate Fist Positions using Angle ---
         // Left Fist Position
         const leftFistAngle = this.targetAngle + fistAngleOffset;
-        const leftFistX = this.x + Math.cos(leftFistAngle) * fistDist;
-        const leftFistY = this.y + Math.sin(leftFistAngle) * fistDist;
+        const leftFistX = this.x + Math.cos(leftFistAngle) * fistOffsetX;
+        const leftFistY = this.y + Math.sin(leftFistAngle) * fistOffsetX;
 
         // Right Fist Position
         const rightFistAngle = this.targetAngle - fistAngleOffset;
-        const rightFistX = this.x + Math.cos(rightFistAngle) * fistDist;
-        const rightFistY = this.y + Math.sin(rightFistAngle) * fistDist;
+        const rightFistX = this.x + Math.cos(rightFistAngle) * fistOffsetX;
+        const rightFistY = this.y + Math.sin(rightFistAngle) * fistOffsetX;
         // --- END MODIFICATION ---
 	    
         // 2. Draw Crown
