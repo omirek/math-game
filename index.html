@@ -304,9 +304,9 @@ const firebaseConfig = {
     // --- Champion Constants ---
 const CHAMPION_RADIUS = 15;
 const CHAMPION_COLOR = '#FFD700'; // Gold
-const CHAMPION_MAX_HP = 450;
+const CHAMPION_MAX_HP = 600;
 const CHAMPION_SPEED = 1.0; // Slowest
-const CHAMPION_ATTACK_DAMAGE = 8.0;
+const CHAMPION_ATTACK_DAMAGE = 10;
 const CHAMPION_ATTACK_COOLDOWN = 55; // Frames
 const CHAMPION_ATTACK_RANGE = 35;
 
@@ -321,8 +321,8 @@ const CHAMPION_SLAM_EFFECT_RANGE = 400; // Affects enemies within this range
 const CHAMPION_SLAM_INITIAL_SPEED = 7.0; // Push speed
 const CHAMPION_SLAM_DAMAGE = 50;
 
-const CHAMPION_INITIAL_COST = 200;
-const CHAMPION_COST_INCREASE = 125;
+const CHAMPION_INITIAL_COST = 150;
+const CHAMPION_COST_INCREASE = 100;
 	  
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -336,7 +336,7 @@ const CHAMPION_COST_INCREASE = 125;
     const BASE_ARMY_CAP = 10;                  // Starting maximum number of player units
     const ARMY_CAP_INCREASE_PER_UPGRADE = 5;   // How many slots each upgrade adds
     const BASE_ARMY_CAP_UPGRADE_COST = 75;     // Cost of the *first* upgrade
-    const ARMY_CAP_UPGRADE_COST_SCALING = 1.8; // Cost multiplier for subsequent upgrades (e.g., 1.8x)
+    const ARMY_CAP_UPGRADE_COST_SCALING = 1.5; // Cost multiplier for subsequent upgrades (e.g., 1.8x)
 
     let currentArmyCap = BASE_ARMY_CAP;         // Player's current cap
     let armyCapUpgradeLevel = 0;                // How many times the cap has been upgraded
@@ -369,7 +369,7 @@ let championExists = false;
     const INITIAL_INTERMISSION_DURATION = 8 * 60; // Shorter pause before Wave 1
     const BASE_ENEMY_COUNT = 5;
     const ENEMY_COUNT_INCREASE_PER_WAVE = 2;
-    const BASE_SPAWN_INTERVAL = 200; // Frames (2 seconds)
+    const BASE_SPAWN_INTERVAL = 300; // Frames (2 seconds)
     const SPAWN_INTERVAL_DECREASE_PER_WAVE = 10; // Frames
     const MIN_SPAWN_INTERVAL = 35; // Minimum frames (0.5 seconds)
     const sndSpawnSuccess = new Audio('sounds/cash.mp3');
@@ -770,7 +770,7 @@ function updateChampionButtonDisplay() {
 
             ctx.beginPath();
             // Draw slightly larger than the unit's radius
-            ctx.arc(this.x, this.y, this.radius * 1.3, 0, Math.PI * 2);
+            ctx.arc(this.x, this.y, this.radius * 1.4, 0, Math.PI * 2);
             ctx.fill();
         }
         // --- END ADDITION ---
@@ -1161,264 +1161,7 @@ function updateChampionButtonDisplay() {
 
     } // End of Unit class
 
-    // --- Mage Class ---
-    class Mage extends Unit {
-      constructor(x, y) {
-        super(x, y, 'mage'); // Call base class constructor
-        // Override or set Mage-specific properties
-        this.color = '#2ecc71'; // Emerald green
-        this.speed = 1.1;
-        this.range = 120; // Range for abilities, not direct attack
-        this.maxHp = 50; // Mages might be slightly squishier
-        this.hp = this.maxHp;
-	      
-        this.isFleeingOOM = false; // True if currently fleeing due to low mana
-        this.healRate = 0.16; // HP per frame
-        this.healRange = 40;
-        this.bounceCooldownMax = 500; // 360 value is 3 seconds at 60fps
-        this.bounceCooldown = 0;
-        this.bounceTriggerRange = 70; // Enemies within this range can trigger the bounce
-        this.bounceEffectRange = 200; // Enemies within this range are affected when bounce triggers
-        this.bounceForce = 150; // How far enemies are pushed
-	this.bounceInitialSpeed = 9; // Adjust this value to control initial push speed
-
-	this.shockwaveActive = false;
-        this.shockwaveTimer = 0; // Counts down animation frames
-        this.shockwaveDuration = 30; // Duration in frames (e.g., 0.5 seconds at 60fps)
-        this.shockwaveMaxRadius = this.bounceEffectRange; // Expand out to the effect range
-
-	this.manaChargeAnimTimer = 0; // Timer cycles continuously for pulsing effect
-        this.manaChargeAnimDuration = 60; // Duration of one pulse cycle in frames (e.g., 1 second)
-        this.manaChargeMaxRadius = this.radius * 1.8; // Max size of the blue pulse (smaller than bounce)
-        this.manaChargeBaseOpacity = 0.5; // Base opacity for the blue pulse
-
-	this.maxMana = 100;
-        this.currentMana = this.maxMana; // Start full
-        this.manaRegenRate = 0.15; // Mana per frame (e.g., 0.15 * 60 = 9 mana/sec)
-
-        this.bounceManaCost = 35; // Cost to perform bounce
-        this.healManaCost = 0.8; // Cost per successful heal tick applied
-        this.lowManaThreshold = this.healManaCost; // Flee if mana is below this
-      }
-
-      // Called BY the base Unit.update() method specifically for mages
-            // Called BY the base Unit.update() method specifically for mages
-        updateMageSpecifics() {
-              // --- START MODIFICATION: Add Logging ---
-            // Manage the shockwave animation timer if it's active
-            if (this.shockwaveActive) {
-                // --- DETAILED LOGGING ---
-                console.log(`Mage (${this.x.toFixed(0)}, ${this.y.toFixed(0)}): updateMageSpecifics - shockwave IS active. Timer BEFORE decrement: ${this.shockwaveTimer}`);
-                // --- END DETAILED LOGGING ---
-
-                this.shockwaveTimer--; // Decrement the timer each frame
-
-                if (this.shockwaveTimer <= 0) {
-                    // --- DETAILED LOGGING ---
-                    console.log(`%cMage (${this.x.toFixed(0)}, ${this.y.toFixed(0)}): updateMageSpecifics - Timer reached 0. Setting shockwaveActive to false.`, "color: red;");
-                    // --- END DETAILED LOGGING ---
-                    this.shockwaveActive = false; // Deactivate the animation when timer runs out
-                }
-            }
-            // --- END MODIFICATION ---
-	    // --- START ADDITION: Mana Regeneration ---
-            if (this.currentMana < this.maxMana) {
-                 this.currentMana = Math.min(this.maxMana, this.currentMana + this.manaRegenRate);
-            }
-            // --- END ADDITION ---
-            // Existing Mage logic (Healing and Bounce Cooldown)
-            this.healNearbyUnits();
-
-            if (this.bounceCooldown <= 0) {
-                this.triggerBounceOff(); // Check if bounce should be triggered
-            } else {
-                this.bounceCooldown--; // Count down bounce ability cooldown
-            }
-        }
-
-            // Provides movement direction towards the "best" target needing healing.
-        // Best is determined by a score combining missing health and proximity.
-        findHealingTargetMovement() {
-            let bestTargetOverall = null;
-            let highestScoreOverall = -1;
-
-            // Find the allied unit (not self) with the highest score globally
-            for (const unit of units) {
-                // Skip self & units at full health
-                if (unit === this || unit.hp >= unit.maxHp) continue;
-
-                const dist = this.distanceTo(unit);
-                // Add small amount to distance to prevent division by zero
-                const distanceFactor = Math.max(dist, 1.0);
-                const missingHp = unit.maxHp - unit.hp;
-                const score = missingHp / distanceFactor;
-
-                if (score > highestScoreOverall) {
-                    highestScoreOverall = score;
-                    bestTargetOverall = unit;
-                }
-            }
-
-            // If a best target was found anywhere...
-            if (bestTargetOverall) {
-                const distToBest = this.distanceTo(bestTargetOverall);
-
-                // Move towards it only if it's not already very close (outside ~70% heal range)
-                if (distToBest > this.healRange * 0.7) {
-                     const dx = bestTargetOverall.x - this.x;
-                     const dy = bestTargetOverall.y - this.y;
-                     // distToBest is already calculated, use it for normalization
-                     if (distToBest > 0) { // Avoid division by zero if somehow target is at exact same spot
-                        return { dx: dx / distToBest, dy: dy / distToBest }; // Return normalized direction
-                     }
-                }
-            }
-
-            // If no target found, or target is already close enough, no specific healing movement needed.
-            return null;
-        }
-
-           // Heals the single "best" target ally (NOT self) within healRange
-      // Best is determined by a score combining missing health and proximity.
-      healNearbyUnits() {
-          let bestTarget = null;
-          let highestScore = -1; // Use -1 to ensure any valid target is chosen initially
-
-          // Find the best target unit (NOT self) currently within healRange
-          for (const unit of units) {
-	
-              // Skip self & units at full health
-              if (unit === this || unit.hp >= unit.maxHp || unit instanceof Champion) continue;
-
-              const dist = this.distanceTo(unit);
-
-              // Check if IN heal range
-              if (dist < this.healRange) {
-                  // Calculate score: missing health / distance
-                  // Add a small amount to distance to prevent division by zero
-                  // and slightly de-prioritize targets right on top of the mage.
-                  const distanceFactor = Math.max(dist, 1.0); // Avoid division by zero or tiny distances
-                  const missingHp = unit.maxHp - unit.hp;
-                  const score = missingHp / distanceFactor;
-
-                  // If this unit has a higher score than the best found so far
-                  if (score > highestScore) {
-                      highestScore = score;
-                      bestTarget = unit;
-                  }
-              }
-          }
-
-          // If a valid target was found within range based on score, heal only that target
-          if (bestTarget) {
-            // --- START MANA CHECK ---
-              // Check if we have enough mana *before* attempting to heal
-              if (this.currentMana >= this.healManaCost) {
-                   const oldHp = bestTarget.hp;
-                   bestTarget.hp = Math.min(bestTarget.hp + this.healRate, bestTarget.maxHp);
-
-                   if (bestTarget.hp > oldHp) {
-                       // Healing was successful, now subtract mana
-                       this.currentMana -= this.healManaCost; // Subtract cost
-                       bestTarget.isBeingHealed = true;
-                       playSound(sndHealPulse);
-                   }
-                   // Else: HP was already max, no mana cost, no sound/flag needed
-              } else {
-                  // Not enough mana to initiate heal tick (optional: play sound?)
-                  // playSound(sndNoMana); // Maybe too noisy if played every frame?
-              }
-              // --- END MANA CHECK ---
-	  }
-      }
-
-      triggerBounceOff() {
-          let enemyInRange = false;
-          for (const enemy of enemies) {
-              if (enemy.hp <= 0) continue;
-              const dist = this.distanceTo(enemy);
-              if (dist < this.bounceTriggerRange) {
-                  enemyInRange = true;
-                  break;
-              }
-          }
-          if (enemyInRange) {
-              this.performBounce();
-          }
-      }
-
-     performBounce() {
-	  // --- START MANA CHECK ---
-          if (this.currentMana < this.bounceManaCost) {
-              //playSound(sndNoMana); // Play "fizzle" or "error" sound
-              return; // Not enough mana, do nothing else
-          }
-          // Sufficient mana, proceed:
-          this.currentMana -= this.bounceManaCost; // Subtract cost
-          // --- END MANA CHECK ---
-          // --- START ADDITION: Trigger Shockwave ---
-          this.shockwaveActive = true;
-          this.shockwaveTimer = this.shockwaveDuration;
-          // --- DETAILED LOGGING ---
-          console.log(`%cBOUNCE TRIGGERED: Mage (${this.x.toFixed(0)}, ${this.y.toFixed(0)}): shockwaveActive SET to true, shockwaveTimer SET to ${this.shockwaveTimer}`, "color: blue; font-weight: bold;");
-          // --- END DETAILED LOGGING ---
-
-            playSound(sndMageBounce);
-
-            // Visual effect for bounce (Original static green circle - KEEP FOR NOW)
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.bounceEffectRange, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(46, 204, 113, 0.2)';
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(46, 204, 113, 0.5)';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            // END Static green circle drawing
-
-            // Apply bounce velocity to enemies
-            for (const enemy of enemies) {
-               if (enemy.hp <= 0) continue;
-               const dist = this.distanceTo(enemy);
-               if (dist > 0 && dist < this.bounceEffectRange) {
-                   const dx = enemy.x - this.x;
-                   const dy = enemy.y - this.y;
-                   const normalizedX = dx / dist;
-                   const normalizedY = dy / dist;
-                   enemy.bounceVelX = normalizedX * this.bounceInitialSpeed;
-                   enemy.bounceVelY = normalizedY * this.bounceInitialSpeed;
-               }
-            }
-            this.bounceCooldown = this.bounceCooldownMax; // Reset cooldown
-
-        }
-
-        // Mages don't shoot projectiles in this setup
-        shoot(target) { } // This is now correctly placed AFTER performBounce closes
-        attack(target) { } // Mages don't melee attack
-
-	 draw() {
-          // 1. Call the base Unit's draw method to draw body and HP bar
-          super.draw(); // Executes Unit.prototype.draw()
-
-          // 2. Draw the Mana Bar below the HP bar
-          const manaRatio = Math.max(0, this.currentMana / this.maxMana);
-          const barWidth = this.radius * 2.5; // Same width as HP bar
-          const barHeight = 4;
-          const barX = this.x - barWidth / 2;
-          // Position it below the HP bar (HP bar is at y - radius - 8)
-          const barY = this.y - this.radius - 8 + barHeight + 2; // Add HP bar height + 2px gap
-
-          ctx.fillStyle = '#333'; // Background
-          ctx.fillRect(barX, barY, barWidth, barHeight);
-          ctx.fillStyle = '#3498db'; // Blue color for mana
-          ctx.fillRect(barX, barY, barWidth * manaRatio, barHeight);
-      }
-    } // End of Mage Class
-
-    // Ensure CHAMPION_ constants are defined before this class
-// Ensure Unit class has 'rallyMultiplier' property (default 1)
-
-class Champion extends Unit {
+    class Champion extends Unit {
     constructor(x, y) {
         super(x, y, 'champion'); // Call base class constructor
 
@@ -1788,6 +1531,263 @@ class Champion extends Unit {
     } // End of draw()
 
 } // End of Champion Class
+
+    // --- Mage Class ---
+    class Mage extends Unit {
+      constructor(x, y) {
+        super(x, y, 'mage'); // Call base class constructor
+        // Override or set Mage-specific properties
+        this.color = '#2ecc71'; // Emerald green
+        this.speed = 1.1;
+        this.range = 120; // Range for abilities, not direct attack
+        this.maxHp = 50; // Mages might be slightly squishier
+        this.hp = this.maxHp;
+	      
+        this.isFleeingOOM = false; // True if currently fleeing due to low mana
+        this.healRate = 0.16; // HP per frame
+        this.healRange = 40;
+        this.bounceCooldownMax = 500; // 360 value is 3 seconds at 60fps
+        this.bounceCooldown = 0;
+        this.bounceTriggerRange = 70; // Enemies within this range can trigger the bounce
+        this.bounceEffectRange = 200; // Enemies within this range are affected when bounce triggers
+        this.bounceForce = 150; // How far enemies are pushed
+	this.bounceInitialSpeed = 9; // Adjust this value to control initial push speed
+
+	this.shockwaveActive = false;
+        this.shockwaveTimer = 0; // Counts down animation frames
+        this.shockwaveDuration = 30; // Duration in frames (e.g., 0.5 seconds at 60fps)
+        this.shockwaveMaxRadius = this.bounceEffectRange; // Expand out to the effect range
+
+	this.manaChargeAnimTimer = 0; // Timer cycles continuously for pulsing effect
+        this.manaChargeAnimDuration = 60; // Duration of one pulse cycle in frames (e.g., 1 second)
+        this.manaChargeMaxRadius = this.radius * 1.8; // Max size of the blue pulse (smaller than bounce)
+        this.manaChargeBaseOpacity = 0.5; // Base opacity for the blue pulse
+
+	this.maxMana = 100;
+        this.currentMana = this.maxMana; // Start full
+        this.manaRegenRate = 0.15; // Mana per frame (e.g., 0.15 * 60 = 9 mana/sec)
+
+        this.bounceManaCost = 35; // Cost to perform bounce
+        this.healManaCost = 0.8; // Cost per successful heal tick applied
+        this.lowManaThreshold = this.healManaCost; // Flee if mana is below this
+      }
+
+      // Called BY the base Unit.update() method specifically for mages
+            // Called BY the base Unit.update() method specifically for mages
+        updateMageSpecifics() {
+              // --- START MODIFICATION: Add Logging ---
+            // Manage the shockwave animation timer if it's active
+            if (this.shockwaveActive) {
+                // --- DETAILED LOGGING ---
+                console.log(`Mage (${this.x.toFixed(0)}, ${this.y.toFixed(0)}): updateMageSpecifics - shockwave IS active. Timer BEFORE decrement: ${this.shockwaveTimer}`);
+                // --- END DETAILED LOGGING ---
+
+                this.shockwaveTimer--; // Decrement the timer each frame
+
+                if (this.shockwaveTimer <= 0) {
+                    // --- DETAILED LOGGING ---
+                    console.log(`%cMage (${this.x.toFixed(0)}, ${this.y.toFixed(0)}): updateMageSpecifics - Timer reached 0. Setting shockwaveActive to false.`, "color: red;");
+                    // --- END DETAILED LOGGING ---
+                    this.shockwaveActive = false; // Deactivate the animation when timer runs out
+                }
+            }
+            // --- END MODIFICATION ---
+	    // --- START ADDITION: Mana Regeneration ---
+            if (this.currentMana < this.maxMana) {
+                 this.currentMana = Math.min(this.maxMana, this.currentMana + this.manaRegenRate);
+            }
+            // --- END ADDITION ---
+            // Existing Mage logic (Healing and Bounce Cooldown)
+            this.healNearbyUnits();
+
+            if (this.bounceCooldown <= 0) {
+                this.triggerBounceOff(); // Check if bounce should be triggered
+            } else {
+                this.bounceCooldown--; // Count down bounce ability cooldown
+            }
+        }
+
+            // Provides movement direction towards the "best" target needing healing.
+        // Best is determined by a score combining missing health and proximity.
+        findHealingTargetMovement() {
+            let bestTargetOverall = null;
+            let highestScoreOverall = -1;
+
+            // Find the allied unit (not self) with the highest score globally
+            for (const unit of units) {
+                // Skip self & units at full health
+                if (unit === this || unit.hp >= unit.maxHp) continue;
+
+                const dist = this.distanceTo(unit);
+                // Add small amount to distance to prevent division by zero
+                const distanceFactor = Math.max(dist, 1.0);
+                const missingHp = unit.maxHp - unit.hp;
+                const score = missingHp / distanceFactor;
+
+                if (score > highestScoreOverall) {
+                    highestScoreOverall = score;
+                    bestTargetOverall = unit;
+                }
+            }
+
+            // If a best target was found anywhere...
+            if (bestTargetOverall) {
+                const distToBest = this.distanceTo(bestTargetOverall);
+
+                // Move towards it only if it's not already very close (outside ~70% heal range)
+                if (distToBest > this.healRange * 0.7) {
+                     const dx = bestTargetOverall.x - this.x;
+                     const dy = bestTargetOverall.y - this.y;
+                     // distToBest is already calculated, use it for normalization
+                     if (distToBest > 0) { // Avoid division by zero if somehow target is at exact same spot
+                        return { dx: dx / distToBest, dy: dy / distToBest }; // Return normalized direction
+                     }
+                }
+            }
+
+            // If no target found, or target is already close enough, no specific healing movement needed.
+            return null;
+        }
+
+           // Heals the single "best" target ally (NOT self) within healRange
+      // Best is determined by a score combining missing health and proximity.
+      healNearbyUnits() {
+          let bestTarget = null;
+          let highestScore = -1; // Use -1 to ensure any valid target is chosen initially
+
+          // Find the best target unit (NOT self) currently within healRange
+          for (const unit of units) {
+	
+              // Skip self & units at full health
+              if (unit === this || unit.hp >= unit.maxHp || unit instanceof Champion) continue;
+
+              const dist = this.distanceTo(unit);
+
+              // Check if IN heal range
+              if (dist < this.healRange) {
+                  // Calculate score: missing health / distance
+                  // Add a small amount to distance to prevent division by zero
+                  // and slightly de-prioritize targets right on top of the mage.
+                  const distanceFactor = Math.max(dist, 1.0); // Avoid division by zero or tiny distances
+                  const missingHp = unit.maxHp - unit.hp;
+                  const score = missingHp / distanceFactor;
+
+                  // If this unit has a higher score than the best found so far
+                  if (score > highestScore) {
+                      highestScore = score;
+                      bestTarget = unit;
+                  }
+              }
+          }
+
+          // If a valid target was found within range based on score, heal only that target
+          if (bestTarget) {
+            // --- START MANA CHECK ---
+              // Check if we have enough mana *before* attempting to heal
+              if (this.currentMana >= this.healManaCost) {
+                   const oldHp = bestTarget.hp;
+                   bestTarget.hp = Math.min(bestTarget.hp + this.healRate, bestTarget.maxHp);
+
+                   if (bestTarget.hp > oldHp) {
+                       // Healing was successful, now subtract mana
+                       this.currentMana -= this.healManaCost; // Subtract cost
+                       bestTarget.isBeingHealed = true;
+                       playSound(sndHealPulse);
+                   }
+                   // Else: HP was already max, no mana cost, no sound/flag needed
+              } else {
+                  // Not enough mana to initiate heal tick (optional: play sound?)
+                  // playSound(sndNoMana); // Maybe too noisy if played every frame?
+              }
+              // --- END MANA CHECK ---
+	  }
+      }
+
+      triggerBounceOff() {
+          let enemyInRange = false;
+          for (const enemy of enemies) {
+              if (enemy.hp <= 0) continue;
+              const dist = this.distanceTo(enemy);
+              if (dist < this.bounceTriggerRange) {
+                  enemyInRange = true;
+                  break;
+              }
+          }
+          if (enemyInRange) {
+              this.performBounce();
+          }
+      }
+
+     performBounce() {
+	  // --- START MANA CHECK ---
+          if (this.currentMana < this.bounceManaCost) {
+              //playSound(sndNoMana); // Play "fizzle" or "error" sound
+              return; // Not enough mana, do nothing else
+          }
+          // Sufficient mana, proceed:
+          this.currentMana -= this.bounceManaCost; // Subtract cost
+          // --- END MANA CHECK ---
+          // --- START ADDITION: Trigger Shockwave ---
+          this.shockwaveActive = true;
+          this.shockwaveTimer = this.shockwaveDuration;
+          // --- DETAILED LOGGING ---
+          console.log(`%cBOUNCE TRIGGERED: Mage (${this.x.toFixed(0)}, ${this.y.toFixed(0)}): shockwaveActive SET to true, shockwaveTimer SET to ${this.shockwaveTimer}`, "color: blue; font-weight: bold;");
+          // --- END DETAILED LOGGING ---
+
+            playSound(sndMageBounce);
+
+            // Visual effect for bounce (Original static green circle - KEEP FOR NOW)
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.bounceEffectRange, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(46, 204, 113, 0.2)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(46, 204, 113, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            // END Static green circle drawing
+
+            // Apply bounce velocity to enemies
+            for (const enemy of enemies) {
+               if (enemy.hp <= 0) continue;
+               const dist = this.distanceTo(enemy);
+               if (dist > 0 && dist < this.bounceEffectRange) {
+                   const dx = enemy.x - this.x;
+                   const dy = enemy.y - this.y;
+                   const normalizedX = dx / dist;
+                   const normalizedY = dy / dist;
+                   enemy.bounceVelX = normalizedX * this.bounceInitialSpeed;
+                   enemy.bounceVelY = normalizedY * this.bounceInitialSpeed;
+               }
+            }
+            this.bounceCooldown = this.bounceCooldownMax; // Reset cooldown
+
+        }
+
+        // Mages don't shoot projectiles in this setup
+        shoot(target) { } // This is now correctly placed AFTER performBounce closes
+        attack(target) { } // Mages don't melee attack
+
+	 draw() {
+          // 1. Call the base Unit's draw method to draw body and HP bar
+          super.draw(); // Executes Unit.prototype.draw()
+
+          // 2. Draw the Mana Bar below the HP bar
+          const manaRatio = Math.max(0, this.currentMana / this.maxMana);
+          const barWidth = this.radius * 2.5; // Same width as HP bar
+          const barHeight = 4;
+          const barX = this.x - barWidth / 2;
+          // Position it below the HP bar (HP bar is at y - radius - 8)
+          const barY = this.y - this.radius - 8 + barHeight + 2; // Add HP bar height + 2px gap
+
+          ctx.fillStyle = '#333'; // Background
+          ctx.fillRect(barX, barY, barWidth, barHeight);
+          ctx.fillStyle = '#3498db'; // Blue color for mana
+          ctx.fillRect(barX, barY, barWidth * manaRatio, barHeight);
+      }
+    } // End of Mage Class
+
+    // Ensure CHAMPION_ constants are defined before this class
+// Ensure Unit class has 'rallyMultiplier' property (default 1)
 	  
     // --- Projectile Class ---
     class Projectile {
