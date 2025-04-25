@@ -1494,12 +1494,14 @@ class Champion extends Unit {
         this.target = this.findNearest(enemies); // Find closest enemy
 
         if (this.target) {
-            const dist = this.distanceTo(this.target);
+	    const dx = this.target.x - this.x;
+                const dy = this.target.y - this.y;
+                const targetDist = Math.hypot(dx, dy); // Calculate distance using hypot
 	     if (targetDist > 0) {
                 // Calculate angle from Champion to Target in radians
                 this.targetAngle = Math.atan2(dy, dx);
             }
-            if (dist <= this.range) {
+            if (targetDist <= this.range) {
                 this.attack(this.target); // Attack if in range (uses standard cooldown)
                 targetDX = 0; targetDY = 0; // Stop moving
             } else { // Move towards target
