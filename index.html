@@ -1473,16 +1473,24 @@ class Champion extends Unit {
         // --- Ability Trigger Logic ---
         // Try to use Rally Cry if ready
         if (this.rallyCooldownTimer <= 0) {
-		 let enemyInRange = false;
-		for (const enemy of enemies) {
-                if (enemy.hp > 0 && this.distanceTo(enemy) < CHAMPION_SLAM_TRIGGER_RANGE) {
-                    enemyInRange = true;
-                    break;
+		 let allyInRange = false;
+                // Check if at least one OTHER friendly unit is within rally range
+                for (const unit of units) {
+                    // Check if it's not self AND it's within range
+                    if (unit !== this && this.distanceTo(unit) < CHAMPION_RALLY_RANGE) {
+                         // Optionally add: && !(unit instanceof Champion) if >1 champ possible later
+                        allyInRange = true;
+                        break; // Found one ally, no need to check further
+                    }
                 }
-            }
-            if (enemyInRange) {
-            this.performRally();
-        }
+
+                // Also check if any enemies are present on the map
+                const enemiesPresent = enemies.some(enemy => enemy.hp > 0);
+
+                // Trigger rally only if cooldown ready, an ally is in range, AND an enemy exists
+                if (allyInRange && enemiesPresent) {
+                     this.performRally();
+                }
 	}
         // Try to use Repulsion Slam if ready and enemy is close enough
         if (this.slamCooldownTimer <= 0) {
@@ -1686,19 +1694,39 @@ class Champion extends Unit {
         const rightFistY = this.y + Math.sin(rightFistAngle) * fistOffsetX;
         // --- END MODIFICATION ---
 	    
-        // 2. Draw Crown
+       // 2. Draw Crown (Revised for better shape)
         ctx.fillStyle = 'yellow';
         ctx.strokeStyle = 'black';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(this.x - crownSize / 2, crownY);
-        ctx.lineTo(this.x - crownSize / 4, crownY - crownSize * 0.8); // Left point
-        ctx.lineTo(this.x, crownY); // Back to middle base
-        ctx.lineTo(this.x, crownY - crownSize); // Middle point
-        ctx.lineTo(this.x, crownY); // Back to middle base
-        ctx.lineTo(this.x + crownSize / 4, crownY - crownSize * 0.8); // Right point
-        ctx.lineTo(this.x + crownSize / 2, crownY); // Right base
+
+        // Define points relative to center top
+        const crownBaseY = crownY; // Use the calculated Y position
+        const crownTopY = crownY - crownSize; // Top of middle spike
+        const crownSidePointY = crownY - crownSize * 0.75; // Top of side spikes (slightly lower)
+
+        const baseHalfWidth = crownSize / 2;
+        const middleSpikeHalfWidth = crownSize * 0.15; // Give middle spike some base width
+        const sideSpikeOffset = crownSize * 0.4; // How far side spikes are from center
+
+        // Start at bottom left corner
+        ctx.moveTo(this.x - baseHalfWidth, crownBaseY);
+
+        // Left spike
+        ctx.lineTo(this.x - sideSpikeOffset, crownSidePointY); // Up to left spike top
+        ctx.lineTo(this.x - middleSpikeHalfWidth, crownBaseY); // Down to left base of middle spike
+
+        // Middle spike
+        ctx.lineTo(this.x, crownTopY); // Up to middle spike top
+        ctx.lineTo(this.x + middleSpikeHalfWidth, crownBaseY); // Down to right base of middle spike
+
+        // Right spike
+        ctx.lineTo(this.x + sideSpikeOffset, crownSidePointY); // Up to right spike top
+        ctx.lineTo(this.x + baseHalfWidth, crownBaseY); // Down to bottom right corner
+
+        // Close path back to start (optional, fill usually closes it)
         ctx.closePath();
+
         ctx.fill();
         ctx.stroke();
 
