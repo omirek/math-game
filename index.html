@@ -802,7 +802,7 @@ function updateChampionButtonDisplay() {
             break;
           case 'archer':
             this.color = 'purple';
-            this.speed = 1.3;
+            this.speed = 1.1;
             this.range = 150;
             this.projectileDamage = 3;
             this.attackCooldown = 60; // frames (1s at 60fps)
@@ -1363,20 +1363,31 @@ function updateChampionButtonDisplay() {
                      this.performRally();
                 }
 	}
-       // Repulsion Slam (Both player and enemy champs can use)
-        if (this.slamCooldownTimer <= 0) {
-            let targetInRange = false;
-            const targetsToCheck = this.isEnemy ? units : enemies; // Enemy champ targets player units, Player champ targets enemies
-            for (const target of targetsToCheck) {
-                if (target.hp > 0 && this.distanceTo(target) < CHAMPION_SLAM_TRIGGER_RANGE) {
-                    targetInRange = true;
-                    break;
+                   // Try to use Repulsion Slam if ready and >= 5 enemies are close enough
+            if (this.slamCooldownTimer <= 0) { // Check if cooldown is ready
+
+                // --- START Corrected Slam Trigger Logic ---
+                let enemiesInRangeCount = 0; // Initialize counter
+                // Determine who the targets are based on allegiance
+                const targetsToCheck = this.isEnemy ? units : enemies;
+
+                // Count how many valid targets are within the TRIGGER range
+                for (const target of targetsToCheck) { // Loop through ALL potential targets
+                    // Check if target is alive AND close enough
+                    if (target.hp > 0 && this.distanceTo(target) < CHAMPION_SLAM_TRIGGER_RANGE) {
+                        enemiesInRangeCount++; // Increment the counter
+                    }
+                    // DO NOT break the loop here - we need the total count
                 }
+
+                // *** CRITICAL CHECK: Trigger ONLY if count is sufficient ***
+                if (enemiesInRangeCount >= 5) {
+                     console.log(`Champion (${this.isEnemy ? 'Enemy' : 'Player'}) Slam Triggered! Count: ${enemiesInRangeCount}`); // Optional Debug log
+                     this.performSlam(); // Call performSlam ONLY if condition met
+                }
+                // --- END Corrected Slam Trigger Logic ---
+                // If count < 5, nothing happens, cooldown effectively waits
             }
-            if (targetInRange) {
-                this.performSlam(); // Slam affects opposing units
-            }
-        }
 
         // --- Movement & Attack Logic (Standard Melee Behavior) ---
         let targetDX = 0;
@@ -1762,7 +1773,7 @@ function updateChampionButtonDisplay() {
 	      
         this.isFleeingOOM = false; // True if currently fleeing due to low mana
         this.healRate = 0.16; // HP per frame
-        this.healRange = 40;
+        this.healRange = 60;
         this.bounceCooldownMax = 500; // 360 value is 3 seconds at 60fps
         this.bounceCooldown = 0;
         this.bounceTriggerRange = 70; // Enemies within this range can trigger the bounce
