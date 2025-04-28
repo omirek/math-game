@@ -305,17 +305,17 @@ const firebaseConfig = {
 const CHAMPION_RADIUS = 15;
 const CHAMPION_COLOR = '#FFD700'; // Gold
 const CHAMPION_MAX_HP = 600;
-const CHAMPION_SPEED = 1.0; // Slowest
-const CHAMPION_ATTACK_DAMAGE = 10;
+const CHAMPION_SPEED = 0.8; // Slowest
+const CHAMPION_ATTACK_DAMAGE = 12;
 const CHAMPION_ATTACK_COOLDOWN = 55; // Frames
-const CHAMPION_ATTACK_RANGE = 35;
+const CHAMPION_ATTACK_RANGE = 40;
 
-const CHAMPION_RALLY_COOLDOWN = 1200; // Frames (20 seconds)
+const CHAMPION_RALLY_COOLDOWN = 1400; // Frames (20 seconds)
 const CHAMPION_RALLY_DURATION = 500; // Frames (5 seconds)
 const CHAMPION_RALLY_RANGE = 200;
 const CHAMPION_RALLY_BUFF_PERCENT = 0.50; // +30% damage
 
-const CHAMPION_SLAM_COOLDOWN = 1000; // Frames (25 seconds)
+const CHAMPION_SLAM_COOLDOWN = 800; // Frames (25 seconds)
 const CHAMPION_SLAM_TRIGGER_RANGE = 100; // Enemy must be this close to trigger
 const CHAMPION_SLAM_EFFECT_RANGE = 400; // Affects enemies within this range
 const CHAMPION_SLAM_INITIAL_SPEED = 7.0; // Push speed
@@ -343,10 +343,14 @@ const SOUND_PATH = 'sounds/'; // Path to your sounds folder
     const BASE_ARMY_CAP = 10;                  // Starting maximum number of player units
     const ARMY_CAP_INCREASE_PER_UPGRADE = 5;   // How many slots each upgrade adds
     const BASE_ARMY_CAP_UPGRADE_COST = 75;     // Cost of the *first* upgrade
-    const ARMY_CAP_UPGRADE_COST_SCALING = 1.5; // Cost multiplier for subsequent upgrades (e.g., 1.8x)
+    const ARMY_CAP_UPGRADE_COST_SCALING = 1.8; // Cost multiplier for subsequent upgrades (e.g., 1.8x)
 
     let currentArmyCap = BASE_ARMY_CAP;         // Player's current cap
     let armyCapUpgradeLevel = 0;                // How many times the cap has been upgraded
+
+    const WAVE_MULTI_SPAWN_START = 1; // Wave number when multi-spawns can begin
+const PROB_SPAWN_3 = 0.07; // 7% chance to spawn 3 enemies
+const PROB_SPAWN_2 = 0.20; // 20% chance to spawn 2 enemies (Total 27% chance for >1)
 
     const units = [];
     const enemies = [];
@@ -2309,8 +2313,33 @@ function updateChampionButtonDisplay() {
             spawnTimer--; // Countdown timer for next spawn
 
             if (spawnTimer <= 0 && enemiesSpawnedThisWave < enemiesToSpawnThisWave) {
-                spawnUnit('enemy'); // Spawn one enemy
-                enemiesSpawnedThisWave++;
+                // --- START MULTI-SPAWN LOGIC ---
+            let enemiesToSpawnNow = 1; // Default to spawning 1 enemy
+
+            // Check if current wave is high enough for multi-spawns
+            if (currentWave >= WAVE_MULTI_SPAWN_START) {
+                const randomChance = Math.random(); // Get random number 0.0 to < 1.0
+
+                if (randomChance < PROB_SPAWN_3) { // Check for triple spawn first (lowest probability)
+                    enemiesToSpawnNow = 3;
+                } else if (randomChance < PROB_SPAWN_3 + PROB_SPAWN_2) { // Check for double spawn
+                    enemiesToSpawnNow = 2;
+                }
+                // Else: enemiesToSpawnNow remains 1
+            }
+
+            // Ensure we don't spawn more than the wave limit allows in this batch
+            enemiesToSpawnNow = Math.min(enemiesToSpawnNow, enemiesToSpawnThisWave - enemiesSpawnedThisWave);
+
+            // Spawn the determined number of enemies
+            // console.log(`Wave ${currentWave}: Spawning ${enemiesToSpawnNow} enemies.`); // Debug log
+            for (let i = 0; i < enemiesToSpawnNow; i++) {
+                spawnUnit('enemy');
+            }
+
+            // Increment the total count for the wave
+            enemiesSpawnedThisWave += enemiesToSpawnNow;
+            // --- END MULTI-SPAWN LOGIC ---
                 spawnTimer = waveSpawnInterval; // Reset timer for the next spawn
 
                 // Update display (optional)
