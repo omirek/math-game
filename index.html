@@ -323,6 +323,12 @@ const CHAMPION_SLAM_DAMAGE = 50;
 
 const CHAMPION_INITIAL_COST = 30;
 const CHAMPION_COST_INCREASE = 200;
+
+// --- Add near other constants ---
+const NUM_CHAMPION_ATTACK_SOUNDS = 7; // How many sounds do you have (1 to N)
+const CHAMPION_ATTACK_SOUND_BASENAME = 'punch'; // Base part of the filename
+const CHAMPION_ATTACK_SOUND_EXT = '.mp3'; // Or '.mp3', '.ogg', etc.
+const SOUND_PATH = 'sounds/'; // Path to your sounds folder
 	  
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -386,6 +392,23 @@ let championExists = false;
     const sndGameOver = new Audio('sounds/game-over.mp3');
      const sndRallyCry = new Audio('sounds/rally_cry.mp3'); // Sound for rally activation
     const sndSlam = new Audio('sounds/slam_impact.mp3');   // Sound for slam activation
+    const sndChampionAttack = []; // Array to hold the attack sounds
+    // --- Preload the champion attack sounds ---
+console.log(`Preloading ${NUM_CHAMPION_ATTACK_SOUNDS} champion attack sounds...`);
+for (let i = 1; i <= NUM_CHAMPION_ATTACK_SOUNDS; i++) {
+    const filename = `${SOUND_PATH}${CHAMPION_ATTACK_SOUND_BASENAME}${i}${CHAMPION_ATTACK_SOUND_EXT}`;
+    try {
+        const audio = new Audio(filename);
+        // Optional: Add load attempt or error handling here if needed
+        sndChampionAttack.push(audio);
+        // console.log(` -> Loaded: ${filename}`);
+    } catch (error) {
+        console.error(`Failed to create Audio object for: ${filename}`, error);
+    }
+}
+if (sndChampionAttack.length !== NUM_CHAMPION_ATTACK_SOUNDS) {
+     console.warn("Warning: Number of loaded champion attack sounds doesn't match expected count.");
+}
     // Optional: Adjust volume (0.0 to 1.0) if needed
     sndSpawnSuccess.volume = 1;
     sndNoGold.volume = 1;
@@ -1381,7 +1404,21 @@ function updateChampionButtonDisplay() {
                 // --- END ADDITION ---
 
             if (target.hp < oldHp) {
-                 playSound(sndMeleeHit); // Use standard melee hit sound? Or unique champ sound?
+                  // --- START MODIFICATION: Play Random Champion Sound ---
+                    // Check if the array has sounds loaded
+                    if (sndChampionAttack.length > 0) {
+                        // Select a random index
+                        const randomIndex = Math.floor(Math.random() * sndChampionAttack.length);
+                        // Get the sound object from the array
+                        const soundToPlay = sndChampionAttack[randomIndex];
+                        // Play the selected sound using the helper function
+                        playSound(soundToPlay);
+                    } else {
+                        // Fallback if array is empty (optional: play default melee sound)
+                        playSound(sndMeleeHit);
+                        console.warn("Champion attack sound array is empty, playing default.");
+                    }
+                    // --- END MODIFICATION ---
             }
              if (target.hp <= 0) {
                  this.target = null; // Clear target if it died
