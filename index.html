@@ -321,8 +321,8 @@ const CHAMPION_SLAM_EFFECT_RANGE = 400; // Affects enemies within this range
 const CHAMPION_SLAM_INITIAL_SPEED = 7.0; // Push speed
 const CHAMPION_SLAM_DAMAGE = 50;
 
-const CHAMPION_INITIAL_COST = 150;
-const CHAMPION_COST_INCREASE = 100;
+const CHAMPION_INITIAL_COST = 300;
+const CHAMPION_COST_INCREASE = 200;
 	  
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -1188,6 +1188,15 @@ function updateChampionButtonDisplay() {
         this.slamAnimTimer = 0;
         this.slamAnimDuration = 40; // Duration of slam visual effect (frames)
         this.slamAnimMaxRadius = CHAMPION_SLAM_EFFECT_RANGE; // Visual expands to effect range
+
+	// --- START ADDITION: Fist Animation State ---
+        this.isLeftFistPunching = false;
+        this.isRightFistPunching = false;
+        this.fistPunchTimer = 0; // Use one timer, activate one fist at a time
+        this.fistPunchDuration = 15; // Duration of punch animation in frames (short!)
+        this.fistPunchExtension = this.radius * 0.7; // How far the fist moves forward
+        this.nextPunchIsLeft = true; // Start with left fist
+        // --- END ADDITION ---
     }
 
     // --- Champion Update Logic (Overrides Unit.update partially) ---
@@ -1225,6 +1234,18 @@ function updateChampionButtonDisplay() {
                 this.slamAnimActive = false;
             }
         }
+
+	 // --- START ADDITION: Update Fist Animation Timer ---
+            if (this.fistPunchTimer > 0) {
+                this.fistPunchTimer--;
+                if (this.fistPunchTimer <= 0) {
+                    // Animation finished, reset flags
+                    this.isLeftFistPunching = false;
+                    this.isRightFistPunching = false;
+                    // console.log("Punch Animation Ended"); // Debug
+                }
+            }
+            // --- END ADDITION ---
 
         // --- Ability Trigger Logic ---
         // Try to use Rally Cry if ready
@@ -1344,6 +1365,21 @@ function updateChampionButtonDisplay() {
             target.damageFlashTimer = FLASH_DURATION; // Use global FLASH_DURATION
             this.cooldown = this.attackCooldownBase; // Reset basic attack cooldown
 
+	    // --- START ADDITION: Trigger Punch Animation ---
+                // Only trigger if not already punching
+                if (!this.isLeftFistPunching && !this.isRightFistPunching) {
+                    this.fistPunchTimer = this.fistPunchDuration; // Start animation timer
+                    if (this.nextPunchIsLeft) {
+                        this.isLeftFistPunching = true;
+                        // console.log("Left Punch Triggered"); // Debug
+                    } else {
+                        this.isRightFistPunching = true;
+                        // console.log("Right Punch Triggered"); // Debug
+                    }
+                    this.nextPunchIsLeft = !this.nextPunchIsLeft; // Alternate for next time
+                }
+                // --- END ADDITION ---
+
             if (target.hp < oldHp) {
                  playSound(sndMeleeHit); // Use standard melee hit sound? Or unique champ sound?
             }
@@ -1450,6 +1486,35 @@ function updateChampionButtonDisplay() {
         const rightFistX = this.x + Math.cos(rightFistAngle) * fistOffsetX;
         const rightFistY = this.y + Math.sin(rightFistAngle) * fistOffsetX;
         // --- END MODIFICATION ---
+
+	// --- START MODIFICATION: Animate Punching Fist ---
+            if (this.isLeftFistPunching || this.isRightFistPunching) {
+                // Calculate animation progress: 0 -> 1 (extend), 1 -> 0 (retract)
+                const halfDuration = this.fistPunchDuration / 2;
+                let punchProgress = 0;
+                if (this.fistPunchTimer > halfDuration) {
+                    // Extending phase (timer goes from Duration down to halfDuration)
+                    punchProgress = 1.0 - (this.fistPunchTimer - halfDuration) / halfDuration;
+                } else {
+                    // Retracting phase (timer goes from halfDuration down to 0)
+                    punchProgress = this.fistPunchTimer / halfDuration;
+                }
+                punchProgress = Math.max(0, Math.min(1, punchProgress)); // Clamp between 0 and 1
+
+                // Calculate extension offset along the target direction
+                const offsetX = Math.cos(this.targetAngle) * this.fistPunchExtension * punchProgress;
+                const offsetY = Math.sin(this.targetAngle) * this.fistPunchExtension * punchProgress;
+
+                // Apply offset to the punching fist
+                if (this.isLeftFistPunching) {
+                    drawLeftFistX += offsetX;
+                    drawLeftFistY += offsetY;
+                } else if (this.isRightFistPunching) {
+                    drawRightFistX += offsetX;
+                    drawRightFistY += offsetY;
+                }
+            }
+            // --- END MODIFICATION ---
 	    
        // 2. Draw Crown (Revised for better shape)
         ctx.fillStyle = 'yellow';
@@ -1463,8 +1528,8 @@ function updateChampionButtonDisplay() {
         const crownSidePointY = crownY - crownSize * 0.75; // Top of side spikes (slightly lower)
 
         const baseHalfWidth = crownSize / 2;
-        const middleSpikeHalfWidth = crownSize * 0.15; // Give middle spike some base width
-        const sideSpikeOffset = crownSize * 0.4; // How far side spikes are from center
+        const middleSpikeHalfWidth = crownSize * 0.3; // Give middle spike some base width
+        const sideSpikeOffset = crownSize * 0.6; // How far side spikes are from center
 
         // Start at bottom left corner
         ctx.moveTo(this.x - baseHalfWidth, crownBaseY);
