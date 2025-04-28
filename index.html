@@ -2324,93 +2324,116 @@ function updateChampionButtonDisplay() {
         waveTimer = 0; // Reset or repurpose waveTimer if needed later
     }
 
-       function updateWaveLogic() {
-        if (!gameRunning) return;
+     function updateWaveLogic() {
+    if (!gameRunning) return;
+    // console.log("Updating wave logic..."); // Uncomment if needed for debugging
 
-        if (waveState === 'INTERMISSION') {
-            // ... (intermission logic - unchanged) ...
-        } else if (waveState === 'SPAWNING') {
-            spawnTimer--;
+    // --- State: INTERMISSION ---
+    if (waveState === 'INTERMISSION') {
+        // --- START Intermission Logic ---
+        waveTimer--; // Countdown intermission timer each frame
 
-            if (spawnTimer <= 0 && enemiesSpawnedThisWave < enemiesToSpawnThisWave) {
-                // --- START Check for ENEMY CHAMPION Spawn ---
-                let spawnChampionInstead = false;
-                // Check if it's a designated champion wave AND it's the very first spawn of this wave
-                if (isChampionWave && enemiesSpawnedThisWave === 0) {
-                    spawnChampionInstead = true;
-                    // We will only spawn 1 unit (the champion) in this specific event
-                    console.log("Spawning Enemy Champion for Wave " + currentWave);
-                }
-                // --- END Check for ENEMY CHAMPION Spawn ---
+        // Display remaining time (optional, convert frames to seconds)
+        const secondsLeft = Math.ceil(Math.max(0, waveTimer) / 60); // Ensure non-negative display
+        // Display correct next wave number
+        updateWaveStatusDisplay(`Wave ${currentWave} Complete! Next wave (${currentWave + 1}) in ${secondsLeft}s...`);
 
+        // Check if intermission timer has finished
+        if (waveTimer <= 0) {
+            console.log("Intermission finished, calling startNextWave..."); // Debug log
+            startNextWave(); // Trigger the start of the next wave
+        }
+        // --- END Intermission Logic ---
 
-                // --- Determine number of units to spawn (Regular or Champion) ---
-                let enemiesToSpawnNow = 1; // Default
+    // --- State: SPAWNING ---
+    } else if (waveState === 'SPAWNING') {
+        spawnTimer--; // Countdown timer for the next spawn event within the wave
 
-                if (spawnChampionInstead) {
-                    enemiesToSpawnNow = 1; // Only spawn the single champion
-                } else {
-                    // --- REGULAR SPAWN LOGIC (with multi-spawn chance) ---
-                    if (currentWave >= WAVE_MULTI_SPAWN_START) {
-                        const randomChance = Math.random();
-                        // Use CURRENT probabilities (currentProbSpawn3, currentProbSpawn2)
-                        if (randomChance < currentProbSpawn3) {
-                            enemiesToSpawnNow = 3;
-                        } else if (randomChance < currentProbSpawn3 + currentProbSpawn2) {
-                            enemiesToSpawnNow = 2;
-                        }
-                    }
-                    // Cap based on remaining enemies for the wave
-                    enemiesToSpawnNow = Math.min(enemiesToSpawnNow, enemiesToSpawnThisWave - enemiesSpawnedThisWave);
-                    // --- END REGULAR SPAWN LOGIC ---
-                }
+        // Check if it's time for a spawn event AND we haven't finished spawning for this wave
+        if (spawnTimer <= 0 && enemiesSpawnedThisWave < enemiesToSpawnThisWave) {
 
-
-                // --- Spawn the calculated number of units (Champion or Regular) ---
-                for (let i = 0; i < enemiesToSpawnNow; i++) {
-                    if (spawnChampionInstead) {
-                        // Spawn the ENEMY Champion
-                        let spawnX = Math.random() * (canvas.width - SAFE_MARGIN * 2) + SAFE_MARGIN;
-                        let spawnY = SAFE_MARGIN + Math.random() * 50;
-                        // Create Champion instance, passing 'true' for isEnemy flag
-                        const enemyChamp = new Champion(spawnX, spawnY, true);
-                        enemies.push(enemyChamp); // Add to enemies array
-                    } else {
-                        // Spawn a regular enemy using your existing function
-                        spawnUnit('enemy');
-                    }
-                }
-                // --- END Spawning Loop ---
-
-
-                // Increment the wave's spawned count
-                enemiesSpawnedThisWave += enemiesToSpawnNow;
-
-                // Reset timer for the NEXT spawn event
-                spawnTimer = waveSpawnInterval;
-
-                // Update display
-                updateWaveStatusDisplay(`Wave ${currentWave} | Spawning: ${enemiesSpawnedThisWave} / ${enemiesToSpawnThisWave}`);
-
-            } // End check for spawn timer & count
-
-
-            // --- Check if wave spawning is complete ---
-            if (enemiesSpawnedThisWave >= enemiesToSpawnThisWave) {
-                // Wave Complete Logic
-                if (currentWave > 0) {
-                    // ... (Your existing wave clear reward logic) ...
-                }
-                waveState = 'INTERMISSION';
-                waveTimer = BASE_INTERMISSION_DURATION;
-                isChampionWave = false; // <<< IMPORTANT: Reset the flag here
-                console.log(`Wave ${currentWave} spawning complete. Starting intermission.`);
-                updateWaveStatusDisplay(`Wave ${currentWave} Complete! Prepare for Wave ${currentWave + 1}...`);
+            // --- Check for ENEMY CHAMPION Spawn ---
+            let spawnChampionInstead = false;
+            // Check if it's a designated champion wave AND it's the very first spawn of this wave
+            if (isChampionWave && enemiesSpawnedThisWave === 0) {
+                spawnChampionInstead = true;
+                console.log("Spawning Enemy Champion for Wave " + currentWave);
             }
-            // --- End Wave Complete Check ---
+            // --- END Check for ENEMY CHAMPION Spawn ---
 
-        } // End SPAWNING state
-    } // End updateWaveLogic
+            // --- Determine number of units to spawn (Regular or Champion) ---
+            let enemiesToSpawnNow = 1; // Default
+
+            if (spawnChampionInstead) {
+                enemiesToSpawnNow = 1; // Only spawn the single champion
+            } else {
+                // --- REGULAR SPAWN LOGIC (with multi-spawn chance) ---
+                if (currentWave >= WAVE_MULTI_SPAWN_START) {
+                    const randomChance = Math.random();
+                    // Use CURRENT probabilities (currentProbSpawn3, currentProbSpawn2)
+                    if (randomChance < currentProbSpawn3) {
+                        enemiesToSpawnNow = 3;
+                    } else if (randomChance < currentProbSpawn3 + currentProbSpawn2) {
+                        enemiesToSpawnNow = 2;
+                    }
+                }
+                // Cap based on remaining enemies for the wave
+                enemiesToSpawnNow = Math.min(enemiesToSpawnNow, enemiesToSpawnThisWave - enemiesSpawnedThisWave);
+                // --- END REGULAR SPAWN LOGIC ---
+            }
+
+            // --- Spawn the calculated number of units (Champion or Regular) ---
+            for (let i = 0; i < enemiesToSpawnNow; i++) {
+                if (spawnChampionInstead) {
+                    // Spawn the ENEMY Champion
+                    let spawnX = Math.random() * (canvas.width - SAFE_MARGIN * 2) + SAFE_MARGIN;
+                    let spawnY = SAFE_MARGIN + Math.random() * 50;
+                    const enemyChamp = new Champion(spawnX, spawnY, true); // Pass true for isEnemy
+                    enemies.push(enemyChamp); // Add to enemies array
+                } else {
+                    // Spawn a regular enemy using your existing function
+                    spawnUnit('enemy');
+                }
+            }
+            // --- END Spawning Loop ---
+
+            // Increment the wave's spawned count
+            enemiesSpawnedThisWave += enemiesToSpawnNow;
+
+            // Reset timer for the NEXT spawn event
+            spawnTimer = waveSpawnInterval;
+
+            // Update display
+            updateWaveStatusDisplay(`Wave ${currentWave} | Spawning: ${enemiesSpawnedThisWave} / ${enemiesToSpawnThisWave}`);
+
+        } // End check for spawn timer & count
+
+        // --- Check if wave spawning is complete ---
+        if (enemiesSpawnedThisWave >= enemiesToSpawnThisWave) {
+            // Wave Complete Logic
+            if (currentWave > 0) {
+                 // Make sure these variables exist if you use them
+                 const waveReward = WAVE_CLEAR_BASE_GOLD + (currentWave * WAVE_CLEAR_GOLD_PER_WAVE);
+                 score += waveReward;
+                 mathScore += WAVE_CLEAR_GOLD_PER_WAVE * 2; // Or your logic
+                 console.log(`Wave ${currentWave} spawning complete! Bonus: +${waveReward} Gold/Score`);
+                 updateScoreDisplay();
+                 // Optional visual flash...
+                 const scoreElement = document.getElementById('scoreDisplay');
+                 if (scoreElement) { /* ... flash code ... */ }
+            }
+            // Transition to INTERMISSION
+            waveState = 'INTERMISSION';
+            waveTimer = BASE_INTERMISSION_DURATION; // Use the correct duration
+            isChampionWave = false; // Reset the champion flag
+            console.log(`Wave ${currentWave} spawning complete. Starting intermission.`);
+            // Update display for intermission start
+             updateWaveStatusDisplay(`Wave ${currentWave} Complete! Prepare for Wave ${currentWave + 1}...`);
+        }
+        // --- End Wave Complete Check ---
+
+    } // End SPAWNING state
+} // End updateWaveLogic
 
 	  function handleKeyPress(event) {
     // Ignore key presses if the game isn't running
