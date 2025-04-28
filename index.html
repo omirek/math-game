@@ -320,6 +320,7 @@ const CHAMPION_SLAM_TRIGGER_RANGE = 100; // Enemy must be this close to trigger
 const CHAMPION_SLAM_EFFECT_RANGE = 400; // Affects enemies within this range
 const CHAMPION_SLAM_INITIAL_SPEED = 7.0; // Push speed
 const CHAMPION_SLAM_DAMAGE = 50;
+const CHAMPION_PUNCH_KNOCKBACK_SPEED = 2.0; // Adjust this value (e.g., 1.5 to 3.0)
 
 const CHAMPION_INITIAL_COST = 30;
 const CHAMPION_COST_INCREASE = 200;
@@ -1419,6 +1420,23 @@ function updateChampionButtonDisplay() {
                         console.warn("Champion attack sound array is empty, playing default.");
                     }
                     // --- END MODIFICATION ---
+		     // --- START ADDITION: Apply Punch Knockback ---
+                    // Calculate direction vector FROM champion TO target
+                    const dx = target.x - this.x;
+                    const dy = target.y - this.y;
+                    const dist = Math.hypot(dx, dy);
+
+                    if (dist > 0) { // Avoid division by zero
+                        // Normalize the direction vector
+                        const normX = dx / dist;
+                        const normY = dy / dist;
+                        // Apply the small knockback velocity to the target unit
+                        // It uses the existing bounce velocity properties on the target
+                        target.bounceVelX = normX * CHAMPION_PUNCH_KNOCKBACK_SPEED;
+                        target.bounceVelY = normY * CHAMPION_PUNCH_KNOCKBACK_SPEED;
+                        // The Unit.update() method will handle applying and decaying this velocity
+                    }
+                    // --- END ADDITION ---
             }
              if (target.hp <= 0) {
                  this.target = null; // Clear target if it died
