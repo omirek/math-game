@@ -1173,12 +1173,22 @@ function updateChampionButtonDisplay() {
            attack(target) {
         // Check if attack is possible (cooldown ready, valid target with HP)
         if (this.cooldown <= 0 && target && target.hp > 0) {
+	    // --- ADD LOG ---
+          if (this.type === 'enemy_champion' || target.type === 'enemy_champion' || this.type === 'champion' || target.type === 'champion') {
+               console.log(`Attack involving Champion: Attacker=${this.type}(${this.isEnemy?'E':'P'}) HP:${this.hp.toFixed(0)}, Target=${target.type}(${target.isEnemy?'E':'P'}) HP:${target.hp.toFixed(0)}`);
+          }
+          // --- END LOG ---
 
             // --- START FIX: Ensure oldHp is defined here ---
             const oldHp = target.hp; // Store target's HP *before* dealing damage
             // --- END FIX ---
 	    const damageDealt = this.attackDamage * this.rallyMultiplier;
           target.hp -= damageDealt;
+	    // --- ADD LOG ---
+           if (this.type === 'enemy_champion' || target.type === 'enemy_champion' || this.type === 'champion' || target.type === 'champion') {
+               console.log(` -> Damage Dealt: ${damageDealt.toFixed(1)}, Target HP After: ${target.hp.toFixed(0)}`);
+          }
+           // --- END LOG ---
 
             // Trigger damage flash
             target.damageFlashTimer = FLASH_DURATION;
@@ -1229,6 +1239,9 @@ function updateChampionButtonDisplay() {
       }
 
     remove() {
+	   // --- ADD LOG ---
+        console.warn(`REMOVING Unit: Type=${this.type}, isEnemy=${this.isEnemy}, HP=${this.hp}, Pos=(${this.x.toFixed(0)},${this.y.toFixed(0)}), Marked?=${this.isMarkedForRemoval}`);
+        // --- END LOG ---
         const list = this.isEnemy ? enemies : units; // Use isEnemy flag if available
         const idx = list.indexOf(this);
         if (idx !== -1) {
@@ -1396,6 +1409,12 @@ function updateChampionButtonDisplay() {
         const potentialTargets = this.isEnemy ? units : enemies; // Enemy champ targets player, Player champ targets enemy
         this.target = this.findNearest(potentialTargets);
         // --- END MODIFICATION ---
+
+	  // --- ADD LOG (Only for Enemy Champ) ---
+            if (this.isEnemy) {
+                 console.log(`EnemyChamp Update: Target is ${this.target ? this.target.type + ' at (' + this.target.x.toFixed(0) + ',' + this.target.y.toFixed(0) + ')' : 'null'}`);
+            }
+            // --- END LOG ---
 
         if (this.target) {
 	     // --- MODIFICATION: Check if target is appropriate type (don't attack own side) ---
@@ -1601,9 +1620,15 @@ function updateChampionButtonDisplay() {
 
             const dist = this.distanceTo(target);
             if (dist < CHAMPION_SLAM_EFFECT_RANGE) {
+		 // --- ADD LOG ---
+             console.log(` -> Slam HIT: ${target.type}(${target.isEnemy?'E':'P'}) HP Before: ${target.hp.toFixed(0)}`);
+             // --- END LOG ---
                 // Apply Damage
                 target.hp -= CHAMPION_SLAM_DAMAGE;
                 target.damageFlashTimer = FLASH_DURATION;
+		 // --- ADD LOG ---
+              console.log(` -> Slam HP After: ${target.hp.toFixed(0)}`);
+             // --- END LOG ---
 
                 // Apply Bounce Velocity
                 if (dist > 0) {
@@ -2442,6 +2467,12 @@ function updateChampionButtonDisplay() {
                     // Create Champion instance, passing 'true' for isEnemy flag
                     const enemyChamp = new Champion(spawnX, spawnY, true);
                     enemies.push(enemyChamp); // Add to the global enemies array
+		     // --- ADD LOGS ---
+           console.log(`%cCREATING ENEMY CHAMPION: Instance=`, "color: red; font-weight: bold;", enemyChamp);
+           console.log(` -> isEnemy flag: ${enemyChamp.isEnemy}`);
+           enemies.push(enemyChamp);
+           console.log(`%cENEMY CHAMPION ADDED to enemies array. Current enemies count: ${enemies.length}`, "color: red; font-weight: bold;");
+           // --- END LOGS ---
                 } else {
                     // Spawn a regular enemy using the standard spawn function
                     spawnUnit('enemy');
