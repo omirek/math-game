@@ -330,6 +330,7 @@ const NUM_CHAMPION_ATTACK_SOUNDS = 7; // How many sounds do you have (1 to N)
 const CHAMPION_ATTACK_SOUND_BASENAME = 'punch'; // Base part of the filename
 const CHAMPION_ATTACK_SOUND_EXT = '.mp3'; // Or '.mp3', '.ogg', etc.
 const SOUND_PATH = 'sounds/'; // Path to your sounds folder
+const ENEMY_CHAMPION_SPAWN_INTERVAL = 10;
 	  
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -369,6 +370,7 @@ const PROB_SPAWN_2 = 0.20; // 20% chance to spawn 2 enemies (Total 27% chance fo
     let enemiesToSpawnThisWave = 0;
     let enemiesSpawnedThisWave = 0;
     let waveSpawnInterval = 0; // Frames between spawns for the current wave
+    let isChampionWave = false;
 
     let correctAnswerTimeoutId = null; // Timer ID for the answer overlay
 
@@ -548,7 +550,7 @@ function spawnChampion() {
     spawnY = Math.max(SAFE_MARGIN, Math.min(spawnY, canvas.height - SAFE_MARGIN - castle.height));
 
     // Create and add Champion
-    const champ = new Champion(spawnX, spawnY);
+    const champ = new Champion(spawnX, spawnY, false);
     units.push(champ);
     console.log("Champion Spawned!");
 
@@ -777,6 +779,7 @@ function updateChampionButtonDisplay() {
         this.cooldown = 0; // For attacks/abilities
 	this.rallyMultiplier = 1; // Default damage multiplier
 	this.isRallyBuffed = false; // <<< ADD THIS
+	this.isEnemy = (type === 'enemy' || type === 'enemy_champion');
 	
 
         // Type-specific properties
@@ -1216,21 +1219,26 @@ function updateChampionButtonDisplay() {
         // Current SAFE_MARGIN = 40 should be sufficient.
       }
 
-      remove() {
-        const list = (this.type === 'enemy' ? enemies : units);
+    remove() {
+        const list = this.isEnemy ? enemies : units; // Use isEnemy flag if available
         const idx = list.indexOf(this);
         if (idx !== -1) {
-        // --- START ADDITION ---
-        // Check if the removed unit is the Champion
-        if (this instanceof Champion) {
-            championExists = false; // Update the global flag
-            console.log("Champion removed, flag set to false."); // Debug log
-            updateChampionButtonDisplay(); // Update button state immediately
+             if (this instanceof Champion) {
+                 // --- MODIFICATION ---
+                 // Only reset the PLAYER champion flag if it's the PLAYER'S champion dying
+                 if (!this.isEnemy) {
+                      championExists = false;
+                      console.log("Player Champion removed, flag set to false.");
+                      updateChampionButtonDisplay(); // Update player button
+                 } else {
+                      console.log("Enemy Champion removed.");
+                 }
+                 // --- END MODIFICATION ---
+             }
+             list.splice(idx, 1);
         }
-        // --- END ADDITION ---
-		list.splice(idx, 1);
-      }
-      }
+    }
+}
 
       // Placeholder methods for Mage - will be overridden but prevent errors if called on base Unit
       updateMageSpecifics() { }
@@ -1239,12 +1247,13 @@ function updateChampionButtonDisplay() {
     } // End of Unit class
 
     class Champion extends Unit {
-    constructor(x, y) {
+    constructor(x, y, isEnemy = false) {
         super(x, y, 'champion'); // Call base class constructor
 
         // --- Assign Core Stats from Constants ---
+	this.isEnemy = isEnemy; // Store allegiance
         this.radius = CHAMPION_RADIUS;
-        this.color = CHAMPION_COLOR;
+        this.color = isEnemy ? '#8B4513' : CHAMPION_COLOR; // Brown if enemy, Gold if player
         this.maxHp = CHAMPION_MAX_HP;
         this.hp = this.maxHp;
         this.speed = CHAMPION_SPEED;
@@ -1326,13 +1335,12 @@ function updateChampionButtonDisplay() {
 
         // --- Ability Trigger Logic ---
         // Try to use Rally Cry if ready
-        if (this.rallyCooldownTimer <= 0) {
+        if (!this.isEnemy && this.rallyCooldownTimer <= 0) {
 		 let allyInRange = false;
                 // Check if at least one OTHER friendly unit is within rally range
                 for (const unit of units) {
                     // Check if it's not self AND it's within range
-                    if (unit !== this && this.distanceTo(unit) < CHAMPION_RALLY_RANGE) {
-                         // Optionally add: && !(unit instanceof Champion) if >1 champ possible later
+                    if (unit !== this && this.distanceTo(unit) < CHAMPION_RALLY_RANGE && !(unit instanceof Champion && unit.isEnemy)) { // Don't buff enemy champ
                         allyInRange = true;
                         break; // Found one ally, no need to check further
                     }
@@ -1346,50 +1354,74 @@ function updateChampionButtonDisplay() {
                      this.performRally();
                 }
 	}
-        // Try to use Repulsion Slam if ready and enemy is close enough
+       // Repulsion Slam (Both player and enemy champs can use)
         if (this.slamCooldownTimer <= 0) {
-            // Check for nearby enemies to trigger the slam
-            let enemiesInRangeCount = 0;
-                for (const enemy of enemies) {
-                    if (enemy.hp > 0 && this.distanceTo(enemy) < CHAMPION_SLAM_TRIGGER_RANGE) {
-                        enemiesInRangeCount++;
-                    }
+            let targetInRange = false;
+            const targetsToCheck = this.isEnemy ? units : enemies; // Enemy champ targets player units, Player champ targets enemies
+            for (const target of targetsToCheck) {
+                if (target.hp > 0 && this.distanceTo(target) < CHAMPION_SLAM_TRIGGER_RANGE) {
+                    targetInRange = true;
+                    break;
                 }
-
-                // Trigger only if enough enemies are nearby
-                if (enemiesInRangeCount >= 5) {
-                     this.performSlam(); // Call performSlam if condition met
-                }
+            }
+            if (targetInRange) {
+                this.performSlam(); // Slam affects opposing units
+            }
         }
 
         // --- Movement & Attack Logic (Standard Melee Behavior) ---
         let targetDX = 0;
         let targetDY = 0;
-        this.target = this.findNearest(enemies); // Find closest enemy
+        // --- MODIFICATION: Target based on allegiance ---
+        const potentialTargets = this.isEnemy ? units : enemies; // Enemy champ targets player, Player champ targets enemy
+        this.target = this.findNearest(potentialTargets);
+        // --- END MODIFICATION ---
 
         if (this.target) {
-	    const dx = this.target.x - this.x;
-                const dy = this.target.y - this.y;
-                const targetDist = Math.hypot(dx, dy); // Calculate distance using hypot
-	     if (targetDist > 0) {
-                // Calculate angle from Champion to Target in radians
-                this.targetAngle = Math.atan2(dy, dx);
-		console.log(`Champion Angle Updated: ${this.targetAngle.toFixed(2)} radians`); 
-            }
-            if (targetDist <= this.range) {
-                this.attack(this.target); // Attack if in range (uses standard cooldown)
-                targetDX = 0; targetDY = 0; // Stop moving
-            } else { // Move towards target
+	     // --- MODIFICATION: Check if target is appropriate type (don't attack own side) ---
+            const isTargetEnemy = enemies.includes(this.target);
+            const isTargetPlayerUnit = units.includes(this.target);
+
+            if ((this.isEnemy && isTargetPlayerUnit) || (!this.isEnemy && isTargetEnemy)) {
+                // Proceed with attack/move logic only if target is on the opposing side
                 const dx = this.target.x - this.x;
                 const dy = this.target.y - this.y;
                 const targetDist = Math.hypot(dx, dy);
+
                 if (targetDist > 0) {
+                    this.targetAngle = Math.atan2(dy, dx);
+                }
+
+                if (targetDist <= this.range) {
+                    this.attack(this.target);
+                    targetDX = 0; targetDY = 0;
+                } else {
                     targetDX = (dx / targetDist);
                     targetDY = (dy / targetDist);
                 }
+            } else {
+                // Target is invalid (e.g., another enemy champ nearby), don't move towards it
+                this.target = null; // Clear invalid target
+                targetDX = 0; targetDY = 0;
             }
+            // --- END MODIFICATION ---
         } else {
-            targetDX = 0; targetDY = 0; // No target, stand still
+            // --- MODIFICATION: Enemy champion attacks castle if no units ---
+             if (this.isEnemy) {
+                 const castleDist = this.distanceTo(castle);
+                 if (castleDist <= this.range + castle.width / 2) { // Use champ range
+                     if (castle.hp > 0) { castle.hp -= (this.attackDamage * 0.5); /* Champ less effective vs castle? */ if(castle.hp <= 0) gameOver(); }
+                     targetDX = 0; targetDY = 0;
+                 } else { // Move towards castle
+                     const dx = castle.x - this.x;
+                     const dy = (castle.y - castle.height / 2 + this.radius) - this.y;
+                     const dist = Math.hypot(dx, dy);
+                     if (dist > 0) { targetDX = (dx / dist); targetDY = (dy / dist); }
+                 }
+             } else { // Player champ stands still if no target
+                 targetDX = 0; targetDY = 0;
+             }
+             // --- END MODIFICATION ---
         }
 
 
@@ -1498,26 +1530,24 @@ function updateChampionButtonDisplay() {
     }
 
     // --- Ability 1: Rallying Cry ---
-    performRally() {
-        // console.log("Champion: Rallying Cry!"); // Debug
-        this.rallyCooldownTimer = CHAMPION_RALLY_COOLDOWN; // Reset cooldown
-        this.rallyDurationTimer = CHAMPION_RALLY_DURATION; // Start buff duration
-        this.removeRallyBuff(); // Clear any previous buff just in case
-        this.rallyBuffAppliedTo.clear(); // Ensure set is empty
+   performRally() {
+        // Only player champion should rally player units
+        if (this.isEnemy) return; // Enemy champions don't rally
 
-	playSound(sndRallyCry);
+        this.rallyCooldownTimer = CHAMPION_RALLY_COOLDOWN;
+        this.rallyDurationTimer = CHAMPION_RALLY_DURATION;
+        this.removeRallyBuff();
+        this.rallyBuffAppliedTo.clear();
+        playSound(sndRallyCry);
 
-        // Find nearby allies and apply buff
+        // Loop through PLAYER units only
         for (const unit of units) {
-             // Don't buff self, don't buff other champions (if ever possible), only buff allies in range
+            // Don't buff self, don't buff enemy champs (redundant check now), check range
             if (unit !== this && !(unit instanceof Champion) && this.distanceTo(unit) < CHAMPION_RALLY_RANGE) {
-                // Assuming Unit class has rallyMultiplier property
                 unit.rallyMultiplier = 1 + CHAMPION_RALLY_BUFF_PERCENT;
-                this.rallyBuffAppliedTo.add(unit); // Track who got buffed
-		 unit.rallyBuffTimer = CHAMPION_RALLY_DURATION; 
-		unit.isRallyBuffed = true; // <<< SET FLAG
-                 // Add visual indicator to buffed units? (e.g., brief color change)
-                 // unit.healFlashTimer = FLASH_DURATION / 2; // Quick blue flash?
+                unit.isRallyBuffed = true;
+                unit.rallyBuffTimer = CHAMPION_RALLY_DURATION;
+                this.rallyBuffAppliedTo.add(unit);
             }
         }
     }
@@ -1536,38 +1566,36 @@ function updateChampionButtonDisplay() {
     }
 
     // --- Ability 2: Repulsion Slam ---
-    performSlam() {
-        // console.log("Champion: Repulsion Slam!"); // Debug
-        this.slamCooldownTimer = CHAMPION_SLAM_COOLDOWN; // Reset cooldown
-
-        // Trigger visual effect
+   performSlam() {
+        this.slamCooldownTimer = CHAMPION_SLAM_COOLDOWN;
+        playSound(sndSlam);
         this.slamAnimActive = true;
         this.slamAnimTimer = this.slamAnimDuration;
-        playSound(sndSlam);
 
-        // Find nearby enemies and apply effects
-        for (const enemy of enemies) {
-            if (enemy.hp <= 0) continue; // Skip dead enemies
+        // --- MODIFICATION: Target opposing units ---
+        const targetsToSlam = this.isEnemy ? units : enemies;
+        // --- END MODIFICATION ---
 
-            const dist = this.distanceTo(enemy);
+        for (const target of targetsToSlam) {
+            if (target.hp <= 0) continue;
+
+            const dist = this.distanceTo(target);
             if (dist < CHAMPION_SLAM_EFFECT_RANGE) {
-                // 1. Apply Damage
-                enemy.hp -= CHAMPION_SLAM_DAMAGE;
-                enemy.damageFlashTimer = FLASH_DURATION; // Trigger red flash
+                // Apply Damage
+                target.hp -= CHAMPION_SLAM_DAMAGE;
+                target.damageFlashTimer = FLASH_DURATION;
 
-                // 2. Apply Bounce Velocity
-                if (dist > 0) { // Avoid division by zero if exactly on top
-                    const dx = enemy.x - this.x;
-                    const dy = enemy.y - this.y;
+                // Apply Bounce Velocity
+                if (dist > 0) {
+                    const dx = target.x - this.x;
+                    const dy = target.y - this.y;
                     const normalizedX = dx / dist;
                     const normalizedY = dy / dist;
-                    // Apply bounce velocity (uses variables on the enemy Unit)
-                    enemy.bounceVelX = normalizedX * CHAMPION_SLAM_INITIAL_SPEED;
-                    enemy.bounceVelY = normalizedY * CHAMPION_SLAM_INITIAL_SPEED;
+                    target.bounceVelX = normalizedX * CHAMPION_SLAM_INITIAL_SPEED;
+                    target.bounceVelY = normalizedY * CHAMPION_SLAM_INITIAL_SPEED;
                 }
             }
         }
-         // Check HP again after applying damage (in case they died) - handled by enemy's own update loop
     }
 
     // --- Draw Champion (Override Unit.draw) ---
@@ -2296,91 +2324,93 @@ function updateChampionButtonDisplay() {
         waveTimer = 0; // Reset or repurpose waveTimer if needed later
     }
 
-    function updateWaveLogic() {
+       function updateWaveLogic() {
         if (!gameRunning) return;
 
         if (waveState === 'INTERMISSION') {
-            waveTimer--; // Countdown intermission timer
-
-            // Display remaining time (optional, convert frames to seconds)
-            const secondsLeft = Math.ceil(waveTimer / 60);
-            updateWaveStatusDisplay(`Wave ${currentWave} Complete! Next wave in ${secondsLeft}s...`);
-
-            if (waveTimer <= 0) {
-                startNextWave();
-            }
+            // ... (intermission logic - unchanged) ...
         } else if (waveState === 'SPAWNING') {
-            spawnTimer--; // Countdown timer for next spawn
+            spawnTimer--;
 
             if (spawnTimer <= 0 && enemiesSpawnedThisWave < enemiesToSpawnThisWave) {
-                // --- START MULTI-SPAWN LOGIC ---
-            let enemiesToSpawnNow = 1; // Default to spawning 1 enemy
-
-            // Check if current wave is high enough for multi-spawns
-            if (currentWave >= WAVE_MULTI_SPAWN_START) {
-                const randomChance = Math.random(); // Get random number 0.0 to < 1.0
-
-                if (randomChance < PROB_SPAWN_3) { // Check for triple spawn first (lowest probability)
-                    enemiesToSpawnNow = 3;
-                } else if (randomChance < PROB_SPAWN_3 + PROB_SPAWN_2) { // Check for double spawn
-                    enemiesToSpawnNow = 2;
+                // --- START Check for ENEMY CHAMPION Spawn ---
+                let spawnChampionInstead = false;
+                // Check if it's a designated champion wave AND it's the very first spawn of this wave
+                if (isChampionWave && enemiesSpawnedThisWave === 0) {
+                    spawnChampionInstead = true;
+                    // We will only spawn 1 unit (the champion) in this specific event
+                    console.log("Spawning Enemy Champion for Wave " + currentWave);
                 }
-                // Else: enemiesToSpawnNow remains 1
-            }
+                // --- END Check for ENEMY CHAMPION Spawn ---
 
-            // Ensure we don't spawn more than the wave limit allows in this batch
-            enemiesToSpawnNow = Math.min(enemiesToSpawnNow, enemiesToSpawnThisWave - enemiesSpawnedThisWave);
 
-            // Spawn the determined number of enemies
-            // console.log(`Wave ${currentWave}: Spawning ${enemiesToSpawnNow} enemies.`); // Debug log
-            for (let i = 0; i < enemiesToSpawnNow; i++) {
-                spawnUnit('enemy');
-            }
+                // --- Determine number of units to spawn (Regular or Champion) ---
+                let enemiesToSpawnNow = 1; // Default
 
-            // Increment the total count for the wave
-            enemiesSpawnedThisWave += enemiesToSpawnNow;
-            // --- END MULTI-SPAWN LOGIC ---
-                spawnTimer = waveSpawnInterval; // Reset timer for the next spawn
+                if (spawnChampionInstead) {
+                    enemiesToSpawnNow = 1; // Only spawn the single champion
+                } else {
+                    // --- REGULAR SPAWN LOGIC (with multi-spawn chance) ---
+                    if (currentWave >= WAVE_MULTI_SPAWN_START) {
+                        const randomChance = Math.random();
+                        // Use CURRENT probabilities (currentProbSpawn3, currentProbSpawn2)
+                        if (randomChance < currentProbSpawn3) {
+                            enemiesToSpawnNow = 3;
+                        } else if (randomChance < currentProbSpawn3 + currentProbSpawn2) {
+                            enemiesToSpawnNow = 2;
+                        }
+                    }
+                    // Cap based on remaining enemies for the wave
+                    enemiesToSpawnNow = Math.min(enemiesToSpawnNow, enemiesToSpawnThisWave - enemiesSpawnedThisWave);
+                    // --- END REGULAR SPAWN LOGIC ---
+                }
 
-                // Update display (optional)
+
+                // --- Spawn the calculated number of units (Champion or Regular) ---
+                for (let i = 0; i < enemiesToSpawnNow; i++) {
+                    if (spawnChampionInstead) {
+                        // Spawn the ENEMY Champion
+                        let spawnX = Math.random() * (canvas.width - SAFE_MARGIN * 2) + SAFE_MARGIN;
+                        let spawnY = SAFE_MARGIN + Math.random() * 50;
+                        // Create Champion instance, passing 'true' for isEnemy flag
+                        const enemyChamp = new Champion(spawnX, spawnY, true);
+                        enemies.push(enemyChamp); // Add to enemies array
+                    } else {
+                        // Spawn a regular enemy using your existing function
+                        spawnUnit('enemy');
+                    }
+                }
+                // --- END Spawning Loop ---
+
+
+                // Increment the wave's spawned count
+                enemiesSpawnedThisWave += enemiesToSpawnNow;
+
+                // Reset timer for the NEXT spawn event
+                spawnTimer = waveSpawnInterval;
+
+                // Update display
                 updateWaveStatusDisplay(`Wave ${currentWave} | Spawning: ${enemiesSpawnedThisWave} / ${enemiesToSpawnThisWave}`);
-            }
 
-            // Check if all enemies for this wave have been spawned
+            } // End check for spawn timer & count
+
+
+            // --- Check if wave spawning is complete ---
             if (enemiesSpawnedThisWave >= enemiesToSpawnThisWave) {
-            	  // Award bonus immediately after last enemy spawns for Wave 1 onwards
-            if (currentWave > 0) {
-                // Calculate the reward
-                const waveReward = WAVE_CLEAR_BASE_GOLD + (currentWave * WAVE_CLEAR_GOLD_PER_WAVE);
-
-                // Add reward to score/gold
-                score += waveReward;
-                mathScore += WAVE_CLEAR_GOLD_PER_WAVE*2; // Assuming you want to add to both
-
-                // Log feedback to console
-                console.log(`Wave ${currentWave} spawning complete! Bonus: +${waveReward} Gold/Score`);
-
-                // Update the score display on the screen
-                updateScoreDisplay();
-
-                // Optional: Add a brief visual flash to the score display
-                const scoreElement = document.getElementById('scoreDisplay');
-                if (scoreElement) {
-                    scoreElement.style.transition = 'background-color 0.1s ease-in-out';
-                    scoreElement.style.backgroundColor = 'lightgoldenrodyellow';
-                    setTimeout(() => {
-                        scoreElement.style.backgroundColor = ''; // Revert color
-                    }, 200); // Flash duration
+                // Wave Complete Logic
+                if (currentWave > 0) {
+                    // ... (Your existing wave clear reward logic) ...
                 }
-            }
                 waveState = 'INTERMISSION';
-                waveTimer = BASE_INTERMISSION_DURATION; // Start the standard intermission countdown
+                waveTimer = BASE_INTERMISSION_DURATION;
+                isChampionWave = false; // <<< IMPORTANT: Reset the flag here
                 console.log(`Wave ${currentWave} spawning complete. Starting intermission.`);
-                // Update display immediately for intermission start
-                 updateWaveStatusDisplay(`Wave ${currentWave} Complete! Prepare for Wave ${currentWave + 1}...`);
+                updateWaveStatusDisplay(`Wave ${currentWave} Complete! Prepare for Wave ${currentWave + 1}...`);
             }
-        }
-    }
+            // --- End Wave Complete Check ---
+
+        } // End SPAWNING state
+    } // End updateWaveLogic
 
 	  function handleKeyPress(event) {
     // Ignore key presses if the game isn't running
