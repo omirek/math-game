@@ -322,7 +322,7 @@ const CHAMPION_SLAM_INITIAL_SPEED = 7.0; // Push speed
 const CHAMPION_SLAM_DAMAGE = 50;
 const CHAMPION_PUNCH_KNOCKBACK_SPEED = 2.0; // Adjust this value (e.g., 1.5 to 3.0)
 
-const CHAMPION_INITIAL_COST = 30;
+const CHAMPION_INITIAL_COST = 300;
 const CHAMPION_COST_INCREASE = 200;
 
 // --- Add near other constants ---
@@ -584,66 +584,98 @@ function updateChampionButtonDisplay() {
     }
 }
 	  
-        function askMathProblem() {
-      // 1. Add '/' to the list of possible operators
-      const ops = ['+', '-', '*', '/'];
-      const op = ops[Math.floor(Math.random() * ops.length)];
+       function askMathProblem() {
+    const MAX_OPERAND_ADD_SUB = 50; // Max value for A or B in +/-
+    const MAX_OPERAND_MULT = 12;    // Max value for A or B in *
+    const MAX_DIV_RESULT = 12;     // Max value for C in A / B = C
+    const MIN_DIVISOR = 2;         // Min value for B in A / B = C
+    const MAX_DIVISOR = 10;        // Max value for B in A / B = C
 
-      let a, b;
+    const ops = ['+', '-', '*', '/'];
+    const op = ops[Math.floor(Math.random() * ops.length)];
 
-      // 2. Generate numbers based on the chosen operator
-      if (op === '/') {
-          // Generate division problems: a / b = c
-          // Ensure b > 1 (divisor is 2-10)
-          // Ensure c > 1 (result is 2-10)
-          let divisor = Math.floor(Math.random() * 9) + 2; // b = Divisor (2 to 10) - Avoids 1
-          let result = Math.floor(Math.random() * 9) + 2;  // c = Result (2 to 10)
-          a = divisor * result; // Calculate a = b * c
-          b = divisor;          // Assign divisor to b
-      } else {
-          // Generate numbers for +, -, * as before
-          a = Math.floor(Math.random() * 10) + 1;
-          b = Math.floor(Math.random() * 10) + 1;
+    let a, b;
 
-          // Ensure subtraction is not negative
-          if (op === '-' && a < b) {
-              [a, b] = [b, a];
-          }
-      }
-
-      currentOperands = [a, b];
-      currentOperator = op;
-
-           // 3. Determine if the problem is "Hard" (for displaying bonus text)
-      // Aligned with operations giving significant gold bonuses
-      const isHard =
-           // Non-trivial Multiplication (excludes *1, *10)
-           (op === '*' && a !== 1 && b !== 1 && a !== 10 && b !== 10) ||
-           // Any Division
-           (op === '/') ||
-           // Subtraction with large first number (as previously defined)
-           (op === '-' && a > 15);
-           // Note: Large additions aren't marked "Hard" by default here, focus on operator bonus types
-
-      // 4. Construct problem string and calculate answer
-      const problemStr = `${a} ${op} ${b}`;
-      currentAnswer = eval(problemStr);
-
-      // --- Display logic remains the same ---
-      const container = document.getElementById('mathProblem');
-      container.innerHTML = `<form id="mathForm">
-        <span>${problemStr} = ?</span>
-        ${isHard ? '<span style="color:gold; font-weight:bold; margin-left: 10px;">💰 Bonus!</span>' : ''}
-        <input type="number" id="answerInput" required>
-        <button type="submit">Submit</button>
-      </form>`;
-
-      document.getElementById('mathForm').addEventListener('submit', submitAnswer);
-      setTimeout(() => {
-        const input = document.getElementById('answerInput');
-        if (input) input.focus();
-       }, 50);
+    // Generate numbers based on operator
+    switch (op) {
+        case '+':
+            a = Math.floor(Math.random() * MAX_OPERAND_ADD_SUB) + 1;
+            b = Math.floor(Math.random() * (100 - a)) + 1; // Ensure a + b <= 100 (approx)
+            break;
+        case '-':
+            a = Math.floor(Math.random() * MAX_OPERAND_ADD_SUB) + 1;
+            b = Math.floor(Math.random() * MAX_OPERAND_ADD_SUB) + 1;
+            if (a < b) [a, b] = [b, a]; // Ensure non-negative result
+            // Avoid result being 0? Optional: if (a === b) b--; or regenerate
+            break;
+        case '*':
+            // Regenerate if a or b is 1 or 10
+            do {
+                a = Math.floor(Math.random() * MAX_OPERAND_MULT) + 1;
+                b = Math.floor(Math.random() * MAX_OPERAND_MULT) + 1;
+            } while (a === 1 || b === 1 || a === 10 || b === 10);
+            break;
+        case '/':
+            // Generate b (divisor) and c (result) first, then calculate a
+            let divisor = Math.floor(Math.random() * (MAX_DIVISOR - MIN_DIVISOR + 1)) + MIN_DIVISOR; // e.g., 2-10
+            let result = Math.floor(Math.random() * (MAX_DIV_RESULT - 1)) + 2; // e.g., 2-12
+            a = divisor * result;
+            b = divisor;
+            break;
     }
+
+    currentOperands = [a, b];
+    currentOperator = op;
+
+    // --- REVISED 'isHard' LOGIC ---
+    // Mark problems as "Hard" (for bonus text) if they represent higher difficulty or reward
+    const isHard =
+         // Any Division is considered hard
+         (op === '/') ||
+         // Multiplication (is always non-trivial now due to generation)
+         (op === '*') ||
+         // Addition is hard if the sum is large
+         (op === '+' && (a + b) > 60) || // Threshold for larger numbers
+         // Subtraction is hard if the first number is large or involves complex borrowing (heuristics)
+         (op === '-' && (a > 60 || (a > 30 && b > 15)) ); // Example criteria for hard subtraction
+
+    // --- END REVISED 'isHard' LOGIC ---
+
+
+    const problemStr = `${a} ${op} ${b}`;
+    currentAnswer = eval(problemStr); // Still safe as we construct the string
+
+    // --- Display logic ---
+    const container = document.getElementById('mathProblem'); // Use your correct container ID
+    if (container) {
+       container.innerHTML = `<form id="mathForm">
+          <span>${problemStr} = ?</span>
+          ${isHard ? '<span style="color:gold; font-weight:bold; margin-left: 10px;">💰 Bonus!</span>' : ''}
+          <input type="number" id="answerInput" required> <!-- Style handled by CSS -->
+          <button type="submit">Submit</button>
+        </form>`;
+
+       const mathForm = document.getElementById('mathForm');
+       if (mathForm) {
+            mathForm.addEventListener('submit', submitAnswer);
+       }
+
+       const inputElement = document.getElementById('answerInput');
+       if (inputElement) {
+           inputElement.style.color = ''; // Reset text color
+           inputElement.style.fontWeight = ''; // Reset font weight
+           inputElement.value = '';
+           inputElement.readOnly = false;
+       }
+    } else {
+        console.error("Could not find math problem container element");
+    }
+
+    setTimeout(() => {
+      const input = document.getElementById('answerInput');
+      if (input) input.focus();
+     }, 50);
+}
 
 
     function submitAnswer(event) {
