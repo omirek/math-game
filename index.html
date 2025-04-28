@@ -1616,7 +1616,7 @@ function updateChampionButtonDisplay() {
             // Find the allied unit (not self) with the highest score globally
             for (const unit of units) {
                 // Skip self & units at full health
-                if (unit === this || unit.hp >= unit.maxHp) continue;
+                if (unit === this || unit.hp >= unit.maxHp || unit instanceof Champion) continue;
 
                 const dist = this.distanceTo(unit);
                 // Add small amount to distance to prevent division by zero
