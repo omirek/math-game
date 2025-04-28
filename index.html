@@ -330,7 +330,7 @@ const NUM_CHAMPION_ATTACK_SOUNDS = 7; // How many sounds do you have (1 to N)
 const CHAMPION_ATTACK_SOUND_BASENAME = 'punch'; // Base part of the filename
 const CHAMPION_ATTACK_SOUND_EXT = '.mp3'; // Or '.mp3', '.ogg', etc.
 const SOUND_PATH = 'sounds/'; // Path to your sounds folder
-const ENEMY_CHAMPION_SPAWN_INTERVAL = 10;
+const ENEMY_CHAMPION_SPAWN_INTERVAL = 3;
 	  
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -2194,7 +2194,7 @@ function updateChampionButtonDisplay() {
     function spawnUnit(type) {
       if (!gameRunning) return;
        // Only check cap for player units (not 'enemy')
-      if (type !== 'enemy') {
+      if (type !== 'enemy' && type !== 'champion') {
           if (units.length >= currentArmyCap) {
               console.log(`Army cap reached (${currentArmyCap}). Cannot spawn ${type}.`);
               // Optional: Add visual feedback - flash the cap button red?
@@ -2325,28 +2325,43 @@ function updateChampionButtonDisplay() {
         }
     }
 
-    function startNextWave() {
-        currentWave++;
-        waveState = 'SPAWNING';
-	playSound(sndWaveStart);
+  function startNextWave() {
+    currentWave++; // Zwiększ numer bieżącej fali
+    waveState = 'SPAWNING'; // Zmień stan na spawnowanie
+    playSound(sndWaveStart); // Odtwórz dźwięk startu fali
 
-        // Calculate wave parameters
-        enemiesToSpawnThisWave = BASE_ENEMY_COUNT + (currentWave - 1) * ENEMY_COUNT_INCREASE_PER_WAVE;
-        waveSpawnInterval = Math.max(MIN_SPAWN_INTERVAL, BASE_SPAWN_INTERVAL - (currentWave - 1) * SPAWN_INTERVAL_DECREASE_PER_WAVE);
-
-	 currentProbSpawn2 = Math.min(MAX_PROB_SPAWN_2, currentProbSpawn2 + PROB_INCREASE_SPAWN_2);
+    // --- Aktualizacja Prawdopodobieństwa Multi-Spawn ---
+    // Zwiększaj co MULTI_SPAWN_INCREASE_INTERVAL fal, ZACZYNAJĄC od fali po WAVE_MULTI_SPAWN_START
+    if (currentWave > WAVE_MULTI_SPAWN_START && // Zacznij zwiększać PO fali startowej
+        (currentWave - WAVE_MULTI_SPAWN_START) % MULTI_SPAWN_INCREASE_INTERVAL === 0) {
+            currentProbSpawn2 = Math.min(MAX_PROB_SPAWN_2, currentProbSpawn2 + PROB_INCREASE_SPAWN_2);
             currentProbSpawn3 = Math.min(MAX_PROB_SPAWN_3, currentProbSpawn3 + PROB_INCREASE_SPAWN_3);
             console.log(`Wave ${currentWave}: Multi-spawn probs increased to P(2)=${currentProbSpawn2.toFixed(2)}, P(3)=${currentProbSpawn3.toFixed(2)}`);
-
-        enemiesSpawnedThisWave = 0;
-        spawnTimer = waveSpawnInterval; // Start ready to spawn first enemy relatively quickly
-
-        console.log(`Starting Wave ${currentWave}: ${enemiesToSpawnThisWave} enemies, spawn interval ${waveSpawnInterval} frames.`);
-        updateWaveStatusDisplay(`Wave ${currentWave} Starting!`);
-
-        // No explicit wave duration timer; wave ends when all enemies are spawned.
-        waveTimer = 0; // Reset or repurpose waveTimer if needed later
     }
+
+    // --- Sprawdzenie Fali z Czempionem Wroga ---
+    // Sprawdź, czy numer fali jest > 0 i jest wielokrotnością interwału spawnu czempiona
+    isChampionWave = (currentWave > 0 && currentWave % ENEMY_CHAMPION_SPAWN_INTERVAL === 0);
+    // Dodaj log dla pewności
+    console.log(`WAVE ${currentWave}: Checking for Champion Wave. isChampionWave = ${isChampionWave}`);
+    if (isChampionWave) {
+         console.log(`Wave ${currentWave}: Enemy Champion WILL spawn!`);
+    }
+    // --- Koniec Sprawdzenia Fali z Czempionem ---
+
+    // Oblicz parametry fali (liczba wrogów, interwał) - bez zmian
+    enemiesToSpawnThisWave = BASE_ENEMY_COUNT + (currentWave - 1) * ENEMY_COUNT_INCREASE_PER_WAVE;
+    waveSpawnInterval = Math.max(MIN_SPAWN_INTERVAL, BASE_SPAWN_INTERVAL - (currentWave - 1) * SPAWN_INTERVAL_DECREASE_PER_WAVE);
+
+    // Reset stanu spawnowania dla nowej fali - bez zmian
+    enemiesSpawnedThisWave = 0;
+    spawnTimer = waveSpawnInterval; // Ustaw timer dla pierwszego spawnu
+    waveTimer = 0; // Zresetuj główny timer fali (jeśli używany)
+
+    // Logi i aktualizacja UI - bez zmian
+    console.log(`Starting Wave ${currentWave}: ${enemiesToSpawnThisWave} total spawns required, spawn interval ${waveSpawnInterval} frames.`);
+    updateWaveStatusDisplay(`Wave ${currentWave} Starting!`);
+}
 
     function updateWaveLogic() {
     // Exit if the game isn't running
