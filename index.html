@@ -586,8 +586,8 @@ function updateChampionButtonDisplay() {
 	  
        function askMathProblem() {
     const MAX_OPERAND_ADD_SUB = 50; // Max value for A or B in +/-
-    const MAX_OPERAND_MULT = 12;    // Max value for A or B in *
-    const MAX_DIV_RESULT = 12;     // Max value for C in A / B = C
+    const MAX_OPERAND_MULT = 10;    // Max value for A or B in *
+    const MAX_DIV_RESULT = 10;     // Max value for C in A / B = C
     const MIN_DIVISOR = 2;         // Min value for B in A / B = C
     const MAX_DIVISOR = 10;        // Max value for B in A / B = C
 
@@ -679,68 +679,85 @@ function updateChampionButtonDisplay() {
 
 
     function submitAnswer(event) {
-      if (event) event.preventDefault(); // Prevent form reload
-      if (!gameRunning) return; // Don't process answers if game over
+    if (event) event.preventDefault();
+    if (!gameRunning) return;
 
-      const input = document.getElementById('answerInput');
-      const value = parseInt(input.value, 10);
-      const correctAnswerOverlay = document.getElementById('correctAnswerOverlay');
-      const correctAnswerMessage = document.getElementById('correctAnswerMessage');
+    const input = document.getElementById('answerInput');
+    const value = parseInt(input.value, 10);
+    const mathProblemContainer = document.getElementById('mathProblem');
+    const correctAnswerOverlay = document.getElementById('correctAnswerOverlay');
+    const correctAnswerMessage = document.getElementById('correctAnswerMessage');
 
-      if (correctAnswerTimeoutId) {
-        clearTimeout(correctAnswerTimeoutId);
-        correctAnswerTimeoutId = null;
-    }
-    if (correctAnswerOverlay) {
-        correctAnswerOverlay.style.display = 'none';
-    }
+    // Clear/Hide Overlay
+    if (correctAnswerTimeoutId) { clearTimeout(correctAnswerTimeoutId); correctAnswerTimeoutId = null; }
+    if (correctAnswerOverlay) { correctAnswerOverlay.style.display = 'none'; }
 
-      if (!isNaN(value) && value === currentAnswer) {
-        // Correct answer
-        let baseGold = 5;
+    if (!isNaN(value) && value === currentAnswer) {
+        // --- Correct Answer: REVISED BONUS LOGIC ---
+        let baseGold = 7; // Increased base slightly
         let operatorBonus = 0;
-        if (currentOperator === '*') operatorBonus = 10;
-        else if (currentOperator === '-') operatorBonus = 2;
-	else if (currentOperator === '/') operatorBonus = 20;
-
         let operandBonus = 0;
-        if (currentOperands[0] > 8 || currentOperands[1] > 8) operandBonus += 3;
-        if (currentOperands[0] + currentOperands[1] > 15) operandBonus += 3;
+
+        // Operator Bonuses
+        if (currentOperator === '*') {
+             operatorBonus = 12; // Multiplication bonus
+        } else if (currentOperator === '/') {
+             operatorBonus = 15; // Division bonus (highest)
+        } else if (currentOperator === '-') {
+             operatorBonus = 3;  // Subtraction bonus
+        }
+        // No specific bonus for '+'
+
+        // Operand Bonuses (using currentOperands array)
+        const opA = currentOperands[0];
+        const opB = currentOperands[1];
+
+        if (opA > 30 || opB > 30) { // Bonus if either number is large
+            operandBonus += 5;
+        }
+        if ((opA + opB) > 70) { // Bonus if sum (indicator of magnitude) is large
+             operandBonus += 5;
+        }
+        // Bonus if result is large? (Could add: if (currentAnswer > 50) operandBonus += 3;)
 
         let totalGold = baseGold + operatorBonus + operandBonus;
+        // --- END REVISED BONUS LOGIC ---
+
 
         score += totalGold;
-        mathScore += totalGold; // Use the same value for simplicity, or calculate differently
+        mathScore += totalGold;
 
         updateScoreDisplay();
-	playSound(sndMathCorrect);
-        // Optional: Visual feedback for correct answer
-        document.getElementById('mathProblem').style.backgroundColor = 'lightgreen';
-        setTimeout(() => { document.getElementById('mathProblem').style.backgroundColor = ''; }, 200);
+        playSound(sndMathCorrect);
 
-      } else {
-         // Optional: Visual feedback for incorrect answer
-	playSound(sndMathIncorrect);
-        document.getElementById('mathProblem').style.backgroundColor = 'lightcoral';
-        setTimeout(() => { document.getElementById('mathProblem').style.backgroundColor = ''; }, 200);
-	if (correctAnswerOverlay && correctAnswerMessage) {
+        if (mathProblemContainer) mathProblemContainer.style.backgroundColor = 'lightgreen';
+        setTimeout(() => { if (mathProblemContainer) mathProblemContainer.style.backgroundColor = ''; }, 200);
+
+        input.value = "";
+        askMathProblem(); // Ask next question immediately
+
+    } else {
+        // --- Incorrect Answer ---
+        playSound(sndMathIncorrect);
+        if (mathProblemContainer) mathProblemContainer.style.backgroundColor = 'lightcoral';
+        setTimeout(() => { if (mathProblemContainer) mathProblemContainer.style.backgroundColor = ''; }, 200);
+
+        // Show Overlay (existing logic)
+        if (correctAnswerOverlay && correctAnswerMessage) {
             const originalProblem = `${currentOperands[0]} ${currentOperator} ${currentOperands[1]}`;
             correctAnswerMessage.innerHTML = `Incorrect!<br><br>${originalProblem} = ${currentAnswer}`;
-            correctAnswerOverlay.style.display = 'flex'; // Make overlay visible (using flex as per CSS)
-
-            // Set timeout to hide the overlay after a delay
-            const displayDuration = 2500; // milliseconds (2.5 seconds)
+            correctAnswerOverlay.style.display = 'flex';
+            const displayDuration = 2500;
             correctAnswerTimeoutId = setTimeout(() => {
-                 if (correctAnswerOverlay) correctAnswerOverlay.style.display = 'none'; // Hide it again
-                 correctAnswerTimeoutId = null; // Clear the ID reference
+                 if (correctAnswerOverlay) correctAnswerOverlay.style.display = 'none';
+                 correctAnswerTimeoutId = null;
             }, displayDuration);
         }
-      }
 
-      // Ask new question regardless of correctness
-      input.value = ""; // Clear input
-      askMathProblem();
+        input.value = "";
+        askMathProblem(); // Ask next question immediately
     }
+}
 
     // --- Unit Classes ---
 
