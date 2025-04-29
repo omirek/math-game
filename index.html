@@ -2727,140 +2727,120 @@ remove() {
     }
 
 
-    function gameLoop() {
-      if (!gameRunning) return; // Exit loop if game is over
+       function gameLoop() {
+        if (!gameRunning) return;
 
-      // Clear canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // --- Clear canvas & Draw static ---
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawCastle();
 
-      // Draw background elements
-      drawCastle();
-		 updateWaveLogic(); // Handle wave progression and enemy spawning
-         updateArmyCountDisplay(); // Update the display every frame
-      // Update and Draw Units (player and enemy)
-      [...units, ...enemies].forEach(u => {
-        if (u.update) u.update(); // Make sure update exists before calling
-        if (u.draw) u.draw();   // Make sure draw exists
-      });
-	    
+        // --- Update Game State ---
+        updateWaveLogic();
+        updateArmyCountDisplay(); // Ensure this uses the correct filtering logic
+        units.forEach(u => { u.isBeingHealed = false; }); // Reset heal state
 
-      // Update and Draw Projectiles
-      projectiles.forEach((p, index) => {
-        if (p.update) p.update();
-        if (p.draw) p.draw();
-      });
-
-      // Remove 'done' projectiles
-      for (let i = projectiles.length - 1; i >= 0; i--) {
-        if (projectiles[i].done) {
-          projectiles.splice(i, 1);
-        }
-      }
-
-       // --- START ADDITION: Cleanup Loop (Run AFTER all updates/draws/projectile hits) ---
-        // Iterate backwards for safe removal using splice
-
-        // Cleanup Enemies
-        for (let i = enemies.length - 1; i >= 0; i--) {
-            if (enemies[i].isMarkedForRemoval) {
-                console.log(`Splicing enemy: ${enemies[i].type} at index ${i}`); // Log removal
-                enemies.splice(i, 1);
-            }
-        }
-
-        // Cleanup Player Units
-        for (let i = units.length - 1; i >= 0; i--) {
-            if (units[i].isMarkedForRemoval) {
-                console.log(`Splicing player unit: ${units[i].type} at index ${i}`); // Log removal
-                units.splice(i, 1);
-            }
-        }
-        // --- END ADDITION ---
-	    
-	         // --- Draw Active Shockwaves (Orange/Red) ---
-      // Drawing AFTER units ensures the effect isn't immediately covered
-      ctx.save();
-      units.forEach(unit => {
-          // Check if it's a Mage AND its shockwave is active
-          if (unit instanceof Mage && unit.shockwaveActive) {
-
-              // --- START REPLACEMENT: Restore Dynamic Circle ---
-              // Calculate animation progress (0 = start, 1 = end)
-              const progress = 1.0 - (unit.shockwaveTimer / unit.shockwaveDuration);
-
-              // Calculate current radius based on progress (linear expansion)
-              const currentRadius = unit.shockwaveMaxRadius * progress;
-
-              // Calculate opacity (fades out from 1 to 0)
-              const opacity = 1.0 - progress;
-
-              // Set drawing style (e.g., Orange/Red fading out)
-              // Ensure opacity is not negative if timer logic is slightly off
-              const safeOpacity = Math.max(0, opacity);
-              ctx.strokeStyle = `rgba(255, 100, 0, ${safeOpacity})`; // Orange-Red, fades alpha
-
-              // Make line thinner as it expands (optional)
-              const currentLineWidth = Math.max(1, 4 * (1.0 - progress) + 1);
-              ctx.lineWidth = currentLineWidth;
-
-              // Draw the expanding circle
-              ctx.beginPath();
-              ctx.arc(unit.x, unit.y, currentRadius, 0, Math.PI * 2);
-              // Only stroke if opacity is still significant to avoid drawing invisible lines
-              if (safeOpacity > 0.05) {
-                   ctx.stroke();
-              }
-              // --- END REPLACEMENT ---
-
-              // Optional: Keep this log temporarily if you want to verify parameters
-              // console.log(`DEBUG: Drawing shockwave indicator for Mage at (${unit.x.toFixed(0)}, ${unit.y.toFixed(0)}), Timer: ${unit.shockwaveTimer}`);
-          }
-      });
-      ctx.restore();
-      // --- End Draw Active Shockwaves ---
-
-	 // --- START ADDITION: Draw Mana Charge Pulse ---
-        ctx.save();
-        units.forEach(unit => {
-            // Draw ONLY if it's a Mage AND it's currently in the 'waiting for mana' state
-            if (unit instanceof Mage && unit.isFleeingOOM) {
-                // Calculate pulsing effect using sine wave based on the cycling timer
-                // progress goes 0 -> 1 over the duration
-                const progress = unit.manaChargeAnimTimer / unit.manaChargeAnimDuration;
-                // angle goes 0 -> 2*PI
-                const angle = progress * Math.PI * 2;
-                // pulseFactor goes 0 -> 1 -> 0 using sine shifted -PI/2
-                const pulseFactor = (Math.sin(angle - Math.PI / 2) + 1) / 2;
-
-                // Calculate current radius based on pulse (e.g., radius * 0.5 up to maxRadius)
-                const currentRadius = (unit.radius * 0.5) + (unit.manaChargeMaxRadius - unit.radius * 0.5) * pulseFactor;
-
-                // Calculate current opacity based on pulse
-                const currentOpacity = unit.manaChargeBaseOpacity * pulseFactor;
-
-                // Set drawing style (Blue, pulsing opacity)
-                ctx.fillStyle = `rgba(52, 152, 219, ${currentOpacity})`; // Blue color (adjust RGB as desired)
-
-                // Draw the pulsing circle (filled, no stroke)
-                ctx.beginPath();
-                ctx.arc(unit.x, unit.y, currentRadius, 0, Math.PI * 2);
-                // Only draw if slightly visible
-                if (currentOpacity > 0.05 && currentRadius > 1) {
-                    ctx.fill();
+        // --- PHASE 1: UPDATE ALL UNITS & PROJECTILES ---
+        // Update player units and enemies
+        [...units, ...enemies].forEach(u => {
+            if (!u.isMarkedForRemoval) { // Skip marked units
+                try { // Optional: Add try-catch around update too for extreme safety
+                    if (u.update) u.update();
+                } catch (error) {
+                     console.error(`ERROR updating unit ${u.type}(${u.isEnemy?'E':'P'})`, error, u);
+                     u.isMarkedForRemoval = true; // Mark problematic unit for removal
                 }
             }
         });
-        ctx.restore();
-        // --- END ADDITION ---
-	    
-       // Check for castle destruction (redundant check, but safe)
-       if (castle.hp <= 0) {
-           gameOver();
-       }
 
-      // Request next frame
-      requestAnimationFrame(gameLoop);
-    } 
+        // Update projectiles (and check if target is marked)
+        projectiles.forEach((p, index) => {
+            if (p.target && p.target.isMarkedForRemoval) {
+                p.done = true;
+            }
+            if (!p.done) {
+                 if (p.update) p.update();
+            }
+        });
+
+
+        // --- PHASE 2: DRAW EVERYTHING ---
+        // Draw Effects (under units) - Shockwave, Mana Pulse
+        ctx.save();
+        units.forEach(unit => {
+            if (!unit.isMarkedForRemoval) { // Only draw effects for non-removed units
+                if (unit instanceof Mage && unit.shockwaveActive) { /* ... draw shockwave ... */ }
+                if (unit instanceof Mage && unit.isFleeingOOM) { /* ... draw mana pulse ... */ }
+                if (unit instanceof Champion && unit.slamAnimActive) { /* ... draw slam animation ... */ }
+                if (unit instanceof Champion && unit.rallyDurationTimer > 0) { /* ... draw rally aura on champ ... */ }
+            }
+        });
+        ctx.restore();
+
+        // Draw Enemies
+        enemies.forEach((e, index) => {
+            if (!e.isMarkedForRemoval) {
+                try {
+                    if (e.draw) e.draw();
+                } catch (error) {
+                    console.error(`ERROR drawing ENEMY at index ${index} (Type: ${e.type}, HP: ${e.hp}):`, error, e);
+                    e.isMarkedForRemoval = true; // Mark problematic unit
+                }
+            }
+        });
+
+        // Draw Player Units
+        units.forEach((u, index) => {
+            if (!u.isMarkedForRemoval) {
+                try {
+                    if (u.draw) u.draw();
+                } catch (error) {
+                    console.error(`ERROR drawing PLAYER unit at index ${index} (Type: ${u.type}, HP: ${u.hp}):`, error, u);
+                    u.isMarkedForRemoval = true; // Mark problematic unit
+                }
+            }
+        });
+
+        // Draw Projectiles
+        projectiles.forEach(p => {
+            if (!p.done && p.draw) p.draw();
+        });
+        // --- END DRAW PHASE ---
+
+
+        // --- PHASE 3: CLEANUP ---
+        // Remove 'done' projectiles
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+            if (projectiles[i].done) {
+                projectiles.splice(i, 1);
+            }
+        }
+
+        // Cleanup Marked Units (Enemies and Player Units)
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            if (enemies[i].isMarkedForRemoval) {
+                console.log(`Splicing enemy: ${enemies[i].type} at index ${i}`);
+                enemies.splice(i, 1);
+            }
+        }
+        for (let i = units.length - 1; i >= 0; i--) {
+            if (units[i].isMarkedForRemoval) {
+                console.log(`Splicing player unit: ${units[i].type} at index ${i}`);
+                units.splice(i, 1);
+            }
+        }
+        // --- END CLEANUP ---
+
+
+        // Check for game end condition
+         if (castle.hp <= 0) {
+             gameOver();
+             return; // Stop loop if game over
+         }
+
+        // Request next frame
+        requestAnimationFrame(gameLoop);
+    } // End gameLoop
+	  
     updateScoreDisplay();
     askMathProblem();
      currentWave = 0; // Start before Wave 1
