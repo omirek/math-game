@@ -322,7 +322,7 @@ const CHAMPION_SLAM_INITIAL_SPEED = 7.0; // Push speed
 const CHAMPION_SLAM_DAMAGE = 50;
 const CHAMPION_PUNCH_KNOCKBACK_SPEED = 2.0; // Adjust this value (e.g., 1.5 to 3.0)
 
-const CHAMPION_INITIAL_COST = 300;
+const CHAMPION_INITIAL_COST = 30;
 const CHAMPION_COST_INCREASE = 200;
 
 // --- Add near other constants ---
@@ -330,7 +330,7 @@ const NUM_CHAMPION_ATTACK_SOUNDS = 7; // How many sounds do you have (1 to N)
 const CHAMPION_ATTACK_SOUND_BASENAME = 'punch'; // Base part of the filename
 const CHAMPION_ATTACK_SOUND_EXT = '.mp3'; // Or '.mp3', '.ogg', etc.
 const SOUND_PATH = 'sounds/'; // Path to your sounds folder
-const ENEMY_CHAMPION_SPAWN_INTERVAL = 20;
+const ENEMY_CHAMPION_SPAWN_INTERVAL = 2;
 	  
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -788,6 +788,7 @@ function updateChampionButtonDisplay() {
         this.cooldown = 0; // For attacks/abilities
 	this.rallyMultiplier = 1; // Default damage multiplier
 	this.isRallyBuffed = false; // <<< ADD THIS
+	this.isMarkedForRemoval = false; // Flag to mark unit for cleanup
 	this.isEnemy = (type === 'enemy' || type === 'enemy_champion');
 	
 
@@ -1238,27 +1239,26 @@ function updateChampionButtonDisplay() {
         // Current SAFE_MARGIN = 40 should be sufficient.
       }
 
-    remove() {
-	   // --- ADD LOG ---
-        console.warn(`REMOVING Unit: Type=${this.type}, isEnemy=${this.isEnemy}, HP=${this.hp}, Pos=(${this.x.toFixed(0)},${this.y.toFixed(0)}), Marked?=${this.isMarkedForRemoval}`);
-        // --- END LOG ---
-        const list = this.isEnemy ? enemies : units; // Use isEnemy flag if available
-        const idx = list.indexOf(this);
-        if (idx !== -1) {
-             if (this instanceof Champion) {
-                 // --- MODIFICATION ---
-                 // Only reset the PLAYER champion flag if it's the PLAYER'S champion dying
-                 if (!this.isEnemy) {
-                      championExists = false;
-                      console.log("Player Champion removed, flag set to false.");
-                      updateChampionButtonDisplay(); // Update player button
-                 } else {
-                      console.log("Enemy Champion removed.");
-                 }
-                 // --- END MODIFICATION ---
-             }
-             list.splice(idx, 1);
-        }
+ remove() {
+          // Only mark if not already marked
+          if (!this.isMarkedForRemoval) {
+              this.isMarkedForRemoval = true;
+              // Log when marked (use console.warn for visibility)
+              console.warn(`MARKING Unit: Type=${this.type}, isEnemy=${this.isEnemy}, HP=${this.hp}, Pos=(${this.x.toFixed(0)},${this.y.toFixed(0)})`);
+
+              // Handle Champion player flag logic when MARKED for removal
+              if (this instanceof Champion) {
+                  if (!this.isEnemy) {
+                      championExists = false; // Player champion limit flag
+                      console.log("Player Champion marked, flag set to false.");
+                      updateChampionButtonDisplay();
+                  } else {
+                      console.log("Enemy Champion marked for removal.");
+                  }
+              }
+          }
+          // --- DO NOT SPLICE THE ARRAY HERE ---
+      } // End remove()
     }
 
 
@@ -2752,6 +2752,27 @@ function updateChampionButtonDisplay() {
           projectiles.splice(i, 1);
         }
       }
+
+       // --- START ADDITION: Cleanup Loop (Run AFTER all updates/draws/projectile hits) ---
+        // Iterate backwards for safe removal using splice
+
+        // Cleanup Enemies
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            if (enemies[i].isMarkedForRemoval) {
+                console.log(`Splicing enemy: ${enemies[i].type} at index ${i}`); // Log removal
+                enemies.splice(i, 1);
+            }
+        }
+
+        // Cleanup Player Units
+        for (let i = units.length - 1; i >= 0; i--) {
+            if (units[i].isMarkedForRemoval) {
+                console.log(`Splicing player unit: ${units[i].type} at index ${i}`); // Log removal
+                units.splice(i, 1);
+            }
+        }
+        // --- END ADDITION ---
+	    
 	         // --- Draw Active Shockwaves (Orange/Red) ---
       // Drawing AFTER units ensures the effect isn't immediately covered
       ctx.save();
