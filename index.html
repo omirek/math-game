@@ -1239,27 +1239,30 @@ function updateChampionButtonDisplay() {
         // Current SAFE_MARGIN = 40 should be sufficient.
       }
 
- remove() {
-          // Only mark if not already marked
-          if (!this.isMarkedForRemoval) {
-              this.isMarkedForRemoval = true;
-              // Log when marked (use console.warn for visibility)
-              console.warn(`MARKING Unit: Type=${this.type}, isEnemy=${this.isEnemy}, HP=${this.hp}, Pos=(${this.x.toFixed(0)},${this.y.toFixed(0)})`);
+remove() {
+        // Only mark if not already marked
+        if (!this.isMarkedForRemoval) {
+            this.isMarkedForRemoval = true;
+            console.warn(`MARKING Unit: Type=${this.type}, isEnemy=${this.isEnemy}, HP=${this.hp}, Pos=(${this.x.toFixed(0)},${this.y.toFixed(0)})`);
 
-              // Handle Champion player flag logic when MARKED for removal
-              if (this instanceof Champion) {
-                  if (!this.isEnemy) {
-                      championExists = false; // Player champion limit flag
-                      console.log("Player Champion marked, flag set to false.");
-                      updateChampionButtonDisplay();
-                  } else {
-                      console.log("Enemy Champion marked for removal.");
-                  }
-              }
-          }
- }
-          // --- DO NOT SPLICE THE ARRAY HERE ---
-      } // End remove()
+            // Handle Champion player flag logic when MARKED for removal
+            if (this instanceof Champion) { // Check if it's a Champion
+                if (!this.isEnemy) { // Check if it's the PLAYER'S Champion
+                    championExists = false;
+                    console.log("Player Champion marked, flag set to false.");
+                    updateChampionButtonDisplay();
+                } else { // It's the ENEMY Champion
+                    console.log("Enemy Champion marked for removal.");
+                }
+                // The 'if (this instanceof Champion)' block ENDS here
+            } // <<< This brace closes 'if (this instanceof Champion)'
+
+            // The 'if (!this.isMarkedForRemoval)' block ENDS here
+        } // <<< This brace closes 'if (!this.isMarkedForRemoval)'
+
+        // --- DO NOT SPLICE THE ARRAY HERE ---
+
+    } // <<< THIS brace CLOSES the entire remove() method definition
     
 
 
