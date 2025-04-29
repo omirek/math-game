@@ -2792,6 +2792,14 @@ remove() {
         units.forEach((u, index) => {
             if (!u.isMarkedForRemoval) {
                 try {
+			    // --- START DETAILED LOGGING BEFORE PLAYER UNIT DRAW ---
+                    console.log(`DRAW CHECK Unit #${index}: Type=${u.type}, HP=${u.hp.toFixed(1)}, ` +
+                                `X=${u.x.toFixed(1)}, Y=${u.y.toFixed(1)}, Radius=${u.radius}, ` +
+                                `Color=${u.color}, Marked=${u.isMarkedForRemoval}, ` +
+                                `BounceX=${u.bounceVelX.toFixed(1)}, BounceY=${u.bounceVelY.toFixed(1)}, ` +
+                                `isBuffed=${u.isRallyBuffed}, isHealed=${u.isBeingHealed}, ` +
+                                `isFleeing=${(u instanceof Mage && u.isFleeingOOM) ? 'Yes' : 'No'}`);
+                    // --- END DETAILED LOGGING ---
                     if (u.draw) u.draw();
                 } catch (error) {
                     console.error(`ERROR drawing PLAYER unit at index ${index} (Type: ${u.type}, HP: ${u.hp}):`, error, u);
