@@ -2763,18 +2763,74 @@ remove() {
         });
 
 
-        // --- PHASE 2: DRAW EVERYTHING ---
-        // Draw Effects (under units) - Shockwave, Mana Pulse
-        ctx.save();
+           // --- Draw Effects (Shockwave, Mana Pulse, Slam Anim, Rally Aura) ---
+        // Draw these BEFORE drawing units if you want them underneath,
+        // or AFTER if you want them on top (adjust z-index if needed or draw order).
+        // Let's assume drawing them first (underneath) is okay for now.
+        ctx.save(); // Save context state for effect drawing
         units.forEach(unit => {
-            if (!unit.isMarkedForRemoval) { // Only draw effects for non-removed units
-                if (unit instanceof Mage && unit.shockwaveActive) { /* ... draw shockwave ... */ }
-                if (unit instanceof Mage && unit.isFleeingOOM) { /* ... draw mana pulse ... */ }
-                if (unit instanceof Champion && unit.slamAnimActive) { /* ... draw slam animation ... */ }
-                if (unit instanceof Champion && unit.rallyDurationTimer > 0) { /* ... draw rally aura on champ ... */ }
-            }
-        });
-        ctx.restore();
+            if (!unit.isMarkedForRemoval) { // Only draw effects for active units
+
+                // 1. Draw Mage Bounce Shockwave (Orange/Red Expanding Ring)
+                if (unit instanceof Mage && unit.shockwaveActive && unit.shockwaveTimer > 0) {
+                    const progress = 1.0 - (unit.shockwaveTimer / unit.shockwaveDuration);
+                    const currentRadius = unit.shockwaveMaxRadius * progress;
+                    const opacity = 1.0 - progress;
+                    const safeOpacity = Math.max(0, opacity);
+                    ctx.strokeStyle = `rgba(255, 100, 0, ${safeOpacity})`; // Orange-Red
+                    ctx.lineWidth = Math.max(1, 4 * (1.0 - progress) + 1); // Thinning line
+                    ctx.beginPath();
+                    ctx.arc(unit.x, unit.y, currentRadius, 0, Math.PI * 2);
+                    if (safeOpacity > 0.05) {
+                        ctx.stroke();
+                    }
+                }
+
+                // 2. Draw Mage Mana Charge Pulse (Blue Pulsing Fill)
+                if (unit instanceof Mage && unit.isFleeingOOM) { // Triggered by state flag
+                    const progress = unit.manaChargeAnimTimer / unit.manaChargeAnimDuration;
+                    const angle = progress * Math.PI * 2;
+                    const pulseFactor = (Math.sin(angle - Math.PI / 2) + 1) / 2; // 0 -> 1 -> 0
+                    const currentRadius = (unit.radius * 0.5) + (unit.manaChargeMaxRadius - unit.radius * 0.5) * pulseFactor;
+                    const currentOpacity = unit.manaChargeBaseOpacity * pulseFactor;
+                    const safeOpacity = Math.max(0, currentOpacity);
+                    ctx.fillStyle = `rgba(52, 152, 219, ${safeOpacity})`; // Blue
+                    ctx.beginPath();
+                    ctx.arc(unit.x, unit.y, currentRadius, 0, Math.PI * 2);
+                    if (safeOpacity > 0.05 && currentRadius > 1) {
+                        ctx.fill();
+                    }
+                }
+
+                // 3. Draw Champion Slam Animation (Yellow Expanding Ring)
+                if (unit instanceof Champion && unit.slamAnimActive && unit.slamAnimTimer > 0) {
+                    const progress = 1.0 - (unit.slamAnimTimer / unit.slamAnimDuration);
+                    const currentRadius = unit.slamAnimMaxRadius * progress;
+                    const opacity = 1.0 - progress;
+                    const safeOpacity = Math.max(0, opacity);
+                    ctx.strokeStyle = `rgba(255, 255, 150, ${safeOpacity})`; // Pale Yellow
+                    ctx.lineWidth = Math.max(1, 6 * (1.0 - progress) + 1); // Thicker effect?
+                    ctx.beginPath();
+                    ctx.arc(unit.x, unit.y, currentRadius, 0, Math.PI * 2);
+                    if (safeOpacity > 0.05) {
+                        ctx.stroke();
+                    }
+                }
+
+                // 4. Draw Champion Rally Aura (on Champion itself) (Fading Gold Fill)
+                if (unit instanceof Champion && unit.rallyDurationTimer > 0) {
+                    const rallyProgress = unit.rallyDurationTimer / CHAMPION_RALLY_DURATION; // 1 down to 0
+                    const rallyOpacity = 0.2 + rallyProgress * 0.3; // Fades from 0.5 to 0.2
+                    ctx.fillStyle = `rgba(255, 215, 0, ${rallyOpacity})`; // Fading Gold aura fill?
+                    ctx.beginPath();
+                    ctx.arc(unit.x, unit.y, unit.radius * 1.2, 0, Math.PI * 2); // Aura slightly larger
+                    ctx.fill();
+                }
+
+            } // End if(!unit.isMarkedForRemoval)
+        }); // End units.forEach for effects
+        ctx.restore(); // Restore context state after drawing effects
+        // --- END Draw Effects ---
 
         // Draw Enemies
         enemies.forEach((e, index) => {
