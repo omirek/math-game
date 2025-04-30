@@ -782,7 +782,7 @@ function updateChampionButtonDisplay() {
         this.y = y;
         this.type = type; // 'melee', 'archer', 'mage', 'enemy'
         this.radius = (type === 'enemy' ? 12 : 10); // Enemy slightly bigger?
-        this.maxHp = (type === 'enemy' ? 80 : 100); // Enemies maybe slightly weaker?
+        this.maxHp = (type === 'enemy' ? 120 : 150); // Enemies maybe slightly weaker?
         this.hp = this.maxHp;
         this.target = null;
         this.cooldown = 0; // For attacks/abilities
