@@ -790,6 +790,9 @@ function updateChampionButtonDisplay() {
 	this.isRallyBuffed = false; // <<< ADD THIS
 	this.isMarkedForRemoval = false; // Flag to mark unit for cleanup
 	this.isEnemy = (type === 'enemy' || type === 'enemy_champion');
+	this.bounceVelX = 0; // Current velocity component from bounce X
+        this.bounceVelY = 0; // Current velocity component from bounce Y
+        this.bounceDecay = 0.95; // Velocity retained each frame (e.g., 0.92 = loses 8% per frame)
 	
 
         // Type-specific properties
@@ -822,10 +825,7 @@ function updateChampionButtonDisplay() {
             this.attackDamage = 2;
              this.attackCooldown = 30;
             this.castleDamage = 0.2; // Damage per frame to castle
-	    this.bounceVelX = 0; // Current velocity component from bounce X
-        this.bounceVelY = 0; // Current velocity component from bounce Y
-        this.bounceDecay = 0.95; // Velocity retained each frame (e.g., 0.92 = loses 8% per frame)
-            break;
+	                break;
 	 case 'champion': // Set defaults here if needed, but constructor overrides
          this.color = CHAMPION_COLOR;
          this.speed = CHAMPION_SPEED;
