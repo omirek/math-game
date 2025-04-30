@@ -305,7 +305,7 @@ const firebaseConfig = {
 const CHAMPION_RADIUS = 15;
 const CHAMPION_COLOR = '#FFD700'; // Gold
 const CHAMPION_MAX_HP = 600;
-const CHAMPION_SPEED = 0.8; // Slowest
+const CHAMPION_SPEED = 0.7; // Slowest
 const CHAMPION_ATTACK_DAMAGE = 12;
 const CHAMPION_ATTACK_COOLDOWN = 55; // Frames
 const CHAMPION_ATTACK_RANGE = 40;
@@ -322,7 +322,7 @@ const CHAMPION_SLAM_INITIAL_SPEED = 7.0; // Push speed
 const CHAMPION_SLAM_DAMAGE = 50;
 const CHAMPION_PUNCH_KNOCKBACK_SPEED = 2.0; // Adjust this value (e.g., 1.5 to 3.0)
 
-const CHAMPION_INITIAL_COST = 30;
+const CHAMPION_INITIAL_COST = 300;
 const CHAMPION_COST_INCREASE = 200;
 
 // --- Add near other constants ---
@@ -330,7 +330,7 @@ const NUM_CHAMPION_ATTACK_SOUNDS = 7; // How many sounds do you have (1 to N)
 const CHAMPION_ATTACK_SOUND_BASENAME = 'punch'; // Base part of the filename
 const CHAMPION_ATTACK_SOUND_EXT = '.mp3'; // Or '.mp3', '.ogg', etc.
 const SOUND_PATH = 'sounds/'; // Path to your sounds folder
-const ENEMY_CHAMPION_SPAWN_INTERVAL = 2;
+const ENEMY_CHAMPION_SPAWN_INTERVAL = 10;
 	  
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -349,8 +349,8 @@ const ENEMY_CHAMPION_SPAWN_INTERVAL = 2;
     let currentArmyCap = BASE_ARMY_CAP;         // Player's current cap
     let armyCapUpgradeLevel = 0;                // How many times the cap has been upgraded
 
- const WAVE_MULTI_SPAWN_START = 1;         // Fala, od której zaczyna się multi-spawn
-const MULTI_SPAWN_INCREASE_INTERVAL = 5;  // Co ile fal zwiększamy prawdopodobieństwo
+ const WAVE_MULTI_SPAWN_START = 5;         // Fala, od której zaczyna się multi-spawn
+const MULTI_SPAWN_INCREASE_INTERVAL = 2;  // Co ile fal zwiększamy prawdopodobieństwo
 
 const BASE_PROB_SPAWN_3 = 0.05;           // Bazowa szansa na 3 (np. 5%)
 const BASE_PROB_SPAWN_2 = 0.15;           // Bazowa szansa na 2 (np. 15%)
